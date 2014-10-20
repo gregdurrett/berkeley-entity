@@ -3,6 +3,8 @@ berkeley-entity
 
 The Berkeley Entity Resolution System jointly solves the problems of named entity recognition, coreference resolution, and entity linking with a feature-rich discriminative model.
 
+
+
 ##Preamble
 
 The Berkeley Entity Resolution System is a state-of-the-art English coreference
@@ -157,18 +159,18 @@ http://scala-ide.org
 Features can be specified on the command line and are instantiated in a few
 different places.
 
-```edu.berkeley.nlp.entity.coref.PairwiseIndexingFeaturizerJoint```: coreference, control with ```-pairwiseFeats```
+Coreference: ```edu.berkeley.nlp.entity.coref.PairwiseIndexingFeaturizerJoint```, control with ```-pairwiseFeats```
 
-```edu.berkeley.nlp.entity.ner.NerFeaturizer```: NER, control with ```-nerFeatureSet```
+NER: ```edu.berkeley.nlp.entity.ner.NerFeaturizer```, control with ```-nerFeatureSet```
 
-```edu.berkeley.nlp.entity.wiki.QueryChoiceComputer```: linking
+Linking: ```edu.berkeley.nlp.entity.wiki.QueryChoiceComputer```
 
-```edu.berkeley.nlp.entity.joint.JointFeaturizerShared```: joint features, control with
+Joint: ```edu.berkeley.nlp.entity.joint.JointFeaturizerShared```, control with
 ```-corefNerFeatures, -wikiNerFeatures, -corefWikiFeatures```
 
-The methods to instantiate features are extensible, so you can play around with
-features as you desire.  Additional information sources can either be passed to
-the featurizers or accessed in a static fashion.
+The methods to instantiate features are extensible.  Additional information
+sources can either be passed to the featurizers or accessed in a static
+fashion.
 
 For reasonable default values, see config/train-ace.conf
 
