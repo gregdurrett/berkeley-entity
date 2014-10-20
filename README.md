@@ -8,7 +8,7 @@ The Berkeley Entity Resolution System jointly solves the problems of named entit
 The Berkeley Entity Resolution System is a state-of-the-art English coreference
 resolution system described in:
 
-"TODO: TITLE" Greg Durrett and Dan Klein. TACL 2014.
+"A Joint Model for Entity Analysis." Greg Durrett and Dan Klein. TACL 2014.
 
 The coreference portion is described in:
 
@@ -157,11 +157,9 @@ http://scala-ide.org
 Features can be specified on the command line and are instantiated in a few
 different places.
 
-```edu.berkeley.nlp.entity.coref.PairwiseIndexingFeaturizerJoint```: coreference, control with
-```-pairwiseFeats```
+```edu.berkeley.nlp.entity.coref.PairwiseIndexingFeaturizerJoint```: coreference, control with ```-pairwiseFeats```
 
-```edu.berkeley.nlp.entity.ner.NerFeaturizer```: NER, control with
-```-nerFeatureSet```
+```edu.berkeley.nlp.entity.ner.NerFeaturizer```: NER, control with ```-nerFeatureSet```
 
 ```edu.berkeley.nlp.entity.wiki.QueryChoiceComputer```: linking
 
