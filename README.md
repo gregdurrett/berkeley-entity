@@ -109,13 +109,13 @@ for the joint model, but also trained coarse models for coreference and NER.
 To reproduce CoNLL results, run:
 
     java -jar berkeley-entity-1.0.jar ++config/base.conf -execDir scratch -mode PREDICT_EVALUATE -testPath data/conll-2012-en/test\
-      -modelPath "models/cached/joint-onto.ser.gz" -wikipediaPath "models/cached/wiki-model-onto.ser.gz" \
+      -modelPath "models/cached/joint-onto.ser.gz" -wikipediaPath "models/cached/wiki-db-onto.ser.gz" \
       -docSuffix auto_conll
 
 To reproduce ACE results, run with:
 
     java -jar berkeley-entity-1.0.jar ++config/base.conf -execDir scratch -mode PREDICT_EVALUATE_ACE -testPath data/ace05/test \
-      -modelPath "models/cached/joint-ace.ser.gz" -wikipediaPath "models/cached/wiki-model-ace.ser.gz" \
+      -modelPath "models/cached/joint-ace.ser.gz" -wikipediaPath "models/cached/wiki-db-ace.ser.gz" \
       -doConllPostprocessing false -useGoldMentions -wikiGoldPath data/ace05/ace05-all-conll-wiki
 
 Note that this requires the ACE data to be in the CoNLL standard with standoff
@@ -150,8 +150,6 @@ To train a CoNLL model, run:
       -pruningStrategy build:models/cached/corefpruner-onto.ser.gz:-5:5 \
       -nerPruningStrategy build:models/cached/nerpruner-onto.ser.gz:-9:5 \
       -numItrs 30
-
-TODO: Ace model instructions
 
 
 

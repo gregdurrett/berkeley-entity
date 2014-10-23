@@ -1,12 +1,12 @@
 #!/bin/bash
 
-jarpath=berkeleyentity-1.0.jar
+jarpath=berkeley-entity-1.0.jar
 
-mkdir scratch
+mkdir test/scratch
 mkdir test/preprocessed
 mkdir test/coref
-mkdir test/coref-ner
-mkdir test/coref-ner-wiki/*
+mkdir test/corefner
+mkdir test/joint
 
 # Preprocess the data, no NER
 if [ ! -f test/preprocessed/government.txt ]; then
@@ -35,7 +35,7 @@ fi
 if [ ! -f test/coref-ner/output.conll ]; then
   echo "RUNNING COREF+NER"
   java -Xmx6g -cp $jarpath edu.berkeley.nlp.entity.Driver ++config/base.conf -execDir test/scratch/corefner -mode PREDICT -modelPath models/corefner-onto.ser.gz -testPath test/preprocessed
-  cp test/scratch/corefner/output*.conll test/coref-ner/
+  cp test/scratch/corefner/output*.conll test/corefner/
 else
   echo "Skipping coref+ner..."
 fi
@@ -47,8 +47,8 @@ if [ ! -f test/coref-ner-wiki/output.conll ]; then
   # First, need to extract the subset of Wikipedia relevant to these documents. We have already
   # done this to avoid having. Here is the command used:
   #java -Xmx4g -cp $jarpath:lib/bliki-resources edu.berkeley.nlp.entity.wiki.WikipediaInterface -datasetPaths test/preprocessed -wikipediaDumpPath data/wikipedia/enwiki-latest-pages-articles.xml -outputPath models/test-wiki-db.ser.gz
-  java -Xmx8g -cp $jarpath edu.berkeley.nlp.entity.Driver ++config/base.conf -execDir test/scratch/corefnerwiki -mode PREDICT -modelPath models/corefnerwiki-onto.ser.gz -testPath test/preprocessed -wikipediaPath test/test-wiki-db.ser.gz
-  cp test/scratch/corefnerwiki/output*.conll test/coref-ner-wiki/
+  java -Xmx8g -cp $jarpath edu.berkeley.nlp.entity.Driver ++config/base.conf -execDir test/scratch/joint -mode PREDICT -modelPath models/joint-onto.ser.gz -testPath test/preprocessed -wikipediaPath models/test-wiki-db.ser.gz
+  cp test/scratch/joint/output*.conll test/joint/
 else
   echo "Skipping coref+ner+wiki..."
 fi
