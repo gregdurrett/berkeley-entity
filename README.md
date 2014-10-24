@@ -37,11 +37,16 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+along with this program.  If not, see http://www.gnu.org/licenses/
 
 
 
 ##Setup
+
+####Models
+
+Models are not included in GitHub due to their large size. Download the latest
+models from http://nlp.cs.berkeley.edu/projects/entity.shtml
 
 ####Datasets
 
@@ -87,11 +92,6 @@ Again, ```pull-datasets.sh``` will do all this for you.
 
 Note that all results in the paper come from version 7 of the CoNLL scorer.
 Other versions of the scorer may return different results.
-
-####Models
-
-Models are not included in GitHub due to their large size. Download the latest
-models from http://nlp.cs.berkeley.edu/projects/entity.shtml
 
 
 
@@ -186,8 +186,6 @@ Joint: ```edu.berkeley.nlp.entity.joint.JointFeaturizerShared```, control with
 The methods to instantiate features are extensible.  Additional information
 sources can either be passed to the featurizers or accessed in a static
 fashion.
-
-For reasonable default values, see config/train-ace.conf
 
 
 

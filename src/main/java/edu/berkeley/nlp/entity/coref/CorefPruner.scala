@@ -108,7 +108,7 @@ object CorefPruner {
     val numberGenderComputer = NumberGenderComputer.readBergsmaLinData(Driver.numberGenderDataPath);
     val queryCounts: Option[QueryCountsBundle] = None;
     // Sort and then shuffle so we get the same folds every time
-    val allTrainDocs = CorefSystem.loadCorefDocs(trainPath, trainSize, Driver.docSuffix, Some(numberGenderComputer)).sortBy(_.rawDoc.uid);
+    val allTrainDocs = CorefSystem.loadCorefDocs(trainPath, trainSize, "auto_conll", Some(numberGenderComputer)).sortBy(_.rawDoc.uid);
     val allTrainDocsReordered = new scala.util.Random(0).shuffle(allTrainDocs);
     
     val rand = new Random(0);

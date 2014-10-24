@@ -46,7 +46,7 @@ if [ ! -f test/coref-ner-wiki/output.conll ]; then
   echo "RUNNING COREF+NER+WIKI"
   # First, need to extract the subset of Wikipedia relevant to these documents. We have already
   # done this to avoid having. Here is the command used:
-  #java -Xmx4g -cp $jarpath:lib/bliki-resources edu.berkeley.nlp.entity.wiki.WikipediaInterface -datasetPaths test/preprocessed -wikipediaDumpPath data/wikipedia/enwiki-latest-pages-articles.xml -outputPath models/test-wiki-db.ser.gz
+  #java -Xmx4g -cp $jarpath:lib/bliki-resources edu.berkeley.nlp.entity.wiki.WikipediaInterface -datasetPaths test/preprocessed -wikipediaDumpPath data/wikipedia/enwiki-latest-pages-articles.xml -outputPath models/wiki-db-test.ser.gz
   java -Xmx8g -cp $jarpath edu.berkeley.nlp.entity.Driver ++config/base.conf -execDir test/scratch/joint -mode PREDICT -modelPath models/joint-onto.ser.gz -testPath test/preprocessed -wikipediaPath models/test-wiki-db.ser.gz
   cp test/scratch/joint/output*.conll test/joint/
 else
