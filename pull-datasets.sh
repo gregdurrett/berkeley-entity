@@ -22,6 +22,7 @@ wget http://conll.cemantix.org/download/reference-coreference-scorers.v7.tar.gz
 tar -xvf reference-coreference-scorers.v7.tar.gz
 mkdir scorer
 mv reference-coreference-scorers/v7/ scorer
-cp scorer/lib/CorScorer.pm lib/
-cp -r scorer/lib/Algorithm lib/
+cp scorer/v7/lib/CorScorer.pm lib/
+cp -r scorer/v7/lib/Algorithm lib/
+rm -rf reference-coreference-scorers*
 
