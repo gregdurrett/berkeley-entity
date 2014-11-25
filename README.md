@@ -103,8 +103,15 @@ text as well as training and evaluating new models.
 
 An example run on new data is included in ```run-test.sh```
 
-Note that a trained model includes not just feature specifications and weights
-for the joint model, but also trained coarse models for coreference and NER.
+Note that this example runs purely from raw text and follows the CoNLL
+annotation standards. Because the CoNLL dataset does not contain supervised
+entity linking data, the entity linking component of the model does not give
+the performance indicated in the paper.  If you're particularly interested in
+entity linking, you should pre-extract mentions from your dataset according to
+the ACE standard and use the ACE version of the model.
+
+A trained model includes not just feature specifications and weights for the
+joint model, but also trained coarse models for coreference and NER.
 
 To reproduce CoNLL results, run:
 

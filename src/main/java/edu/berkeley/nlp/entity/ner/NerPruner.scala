@@ -29,7 +29,9 @@ class NerPrunerFromMarginals(val nerMarginals: HashMap[UID,Seq[Array[Array[Float
                              val pruningThreshold: Double) extends NerPruner with Serializable  {
   
   def pruneSentence(doc: ConllDoc, sentIdx: Int): Array[Array[String]] = {
-    require(nerMarginals.contains(doc.uid));
+    require(nerMarginals.contains(doc.uid), "Doc ID " + doc.uid + " doesn't have precomputed NER marginals" +
+            " and the NER pruner in this model is configured to rely on these. You need to either change" +
+            " how you specify the pruner (if training) or use a different model entirely (if testing)");
     NerPruner.pruneFromMarginals(nerMarginals(doc.uid)(sentIdx), neLabelIndexer, pruningThreshold);
   }
 }
