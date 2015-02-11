@@ -32,7 +32,7 @@ else
 fi
 
 # Run the coref+NER system
-if [ ! -f test/coref-ner/output.conll ]; then
+if [ ! -f test/corefner/output.conll ]; then
   echo "RUNNING COREF+NER"
   java -Xmx6g -cp $jarpath edu.berkeley.nlp.entity.Driver ++config/base.conf -execDir test/scratch/corefner -mode PREDICT -modelPath models/corefner-onto.ser.gz -testPath test/preprocessed
   cp test/scratch/corefner/output*.conll test/corefner/
@@ -42,7 +42,7 @@ fi
 
 # Run the full joint system
 # Now run the joint prediction
-if [ ! -f test/coref-ner-wiki/output.conll ]; then
+if [ ! -f test/joint/output.conll ]; then
   echo "RUNNING COREF+NER+WIKI"
   # First, need to extract the subset of Wikipedia relevant to these documents. We have already
   # done this to avoid having. Here is the command used:
