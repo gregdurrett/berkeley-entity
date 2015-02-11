@@ -273,22 +273,24 @@ object QueryChooser {
     exs;
   }
   
+  // Command line options
+  val trainDataPath = "data/ace05/train";
+  val testDataPath = "data/ace05/dev";
+  val wikiPath = "data/ace05/ace05-all-conll-wiki"
+  val wikiDBPath = "models/wiki-db-ace.ser.gz"
   
   def main(args: Array[String]) {
     LightRunner.initializeOutput(QueryChooser.getClass());
+    LightRunner.populateScala(QueryChooser.getClass(), args)
 //    val wikiAnnotsPath = "data/ace05/ace-annots-multi.ser"
-    val wikiPath = "data/ace05/ace05-all-conll-wiki"
-    val wikiDBPath = "models/wiki-db-ace.ser.gz"
 //    val goldWikification = GUtil.load(wikiAnnotsPath).asInstanceOf[CorpusWikiAnnots];
     val goldWikification = WikiAnnotReaderWriter.readStandoffAnnotsAsCorpusAnnots(wikiPath)
     val wikiDB = GUtil.load(wikiDBPath).asInstanceOf[WikipediaInterface];
     
     val assembler = CorefDocAssembler(Language.ENGLISH, true);
-    val trainDataPath = "data/ace05/train";
     val trainDocs = ConllDocReader.loadRawConllDocsWithSuffix(trainDataPath, -1, "", Language.ENGLISH);
     val trainCorefDocs = trainDocs.map(doc => assembler.createCorefDoc(doc, new MentionPropertyComputer(None)));
     
-    val testDataPath = "data/ace05/dev";
     val testDocs = ConllDocReader.loadRawConllDocsWithSuffix(testDataPath, -1, "", Language.ENGLISH);
     val testCorefDocs = testDocs.map(doc => assembler.createCorefDoc(doc, new MentionPropertyComputer(None)));
     

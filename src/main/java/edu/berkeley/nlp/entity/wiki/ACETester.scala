@@ -13,15 +13,19 @@ import scala.collection.mutable.ArrayBuffer
 import edu.berkeley.nlp.entity.Chunk
 
 object ACETester {
-
+  
+  // Command line options
+  val dataPath = "data/ace05/ace05-all-conll"
+  val wikiDBPath = "models/wiki-db-ace.ser.gz"
+  val wikiPath = "data/ace05/ace05-all-conll-wiki"
+  val useFancyQueryChooser = false;
+    
   def main(args: Array[String]) {
     LightRunner.initializeOutput(ACETester.getClass());
-    val dataPath = args(0);
-    val wikiDBPath = "models/wiki-db-ace.ser.gz"
+    LightRunner.populateScala(ACETester.getClass(), args)
     val docs = ConllDocReader.loadRawConllDocsWithSuffix(dataPath, -1, "", Language.ENGLISH);
 //    val goldWikification = GUtil.load(wikiAnnotsPath).asInstanceOf[CorpusWikiAnnots];
     
-    val wikiPath = "data/ace05/ace05-all-conll-wiki"
     val goldWikification = WikiAnnotReaderWriter.readStandoffAnnotsAsCorpusAnnots(wikiPath)
     
     // Detect mentions, which depend on the NER coarse pass
@@ -35,8 +39,7 @@ object ACETester {
 //    val trainCorefDocs = trainDocs.map(doc => assembler.createCorefDoc(doc, new MentionPropertyComputer(None)));
 //    val wikifier = new BasicWikifier(wikiDB, Some(trainCorefDocs), Some(goldWikification));
     
-    val UseFancyQueryChooser = false;
-    val queryChooser = if (UseFancyQueryChooser) {
+    val queryChooser = if (useFancyQueryChooser) {
       GUtil.load("models/querychooser.ser.gz").asInstanceOf[QueryChooser]
     } else {
       val fi = new Indexer[String];
