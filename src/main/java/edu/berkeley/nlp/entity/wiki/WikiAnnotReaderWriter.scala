@@ -32,6 +32,19 @@ object WikiAnnotReaderWriter {
     new HashMap[UID,Seq[Seq[Chunk[Seq[String]]]]] ++ uidsWithStandoffAnnots;
   }
   
+  def readStandoffAnnotsAsCorpusAnnots(wikiPath: String) = {
+    val goldWikification = new CorpusWikiAnnots;
+    for (entry <- WikiAnnotReaderWriter.readAllStandoffAnnots(wikiPath)) {
+      val fileName = entry._1._1;
+      val docAnnots = new DocWikiAnnots;
+      for (i <- 0 until entry._2.size) {
+        docAnnots += i -> (new ArrayBuffer[Chunk[Seq[String]]]() ++ entry._2(i))
+      }
+      goldWikification += fileName -> docAnnots
+    }
+    goldWikification
+  } 
+  
   def writeStandoffAnnots(writer: PrintWriter, docName: String, docPartNo: Int, annots: HashMap[Int,ArrayBuffer[Chunk[Seq[String]]]], sentLens: Seq[Int]) {
     writeStandoffAnnots(writer, docName, docPartNo, (0 until sentLens.size).map(annots(_)), sentLens);
   }

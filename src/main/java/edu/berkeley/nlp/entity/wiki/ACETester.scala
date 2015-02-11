@@ -9,19 +9,21 @@ import edu.berkeley.nlp.entity.lang.Language
 import edu.berkeley.nlp.futile.LightRunner
 import edu.berkeley.nlp.futile.util.Logger
 import edu.berkeley.nlp.futile.fig.basic.Indexer
+import scala.collection.mutable.ArrayBuffer
+import edu.berkeley.nlp.entity.Chunk
 
 object ACETester {
 
   def main(args: Array[String]) {
     LightRunner.initializeOutput(ACETester.getClass());
     val dataPath = args(0);
-    val wikiAnnotsPath = "data/ace05/ace-annots-multi.ser"
-//    val wikiDBPath = "data/wikipedia/wiki-model-ace.ser.gz"
-//      val wikiDBPath = "data/wikipedia/wiki-model-ace3.ser.gz"
-//      val wikiDBPath = "data/wikipedia/wiki-model-ace-lc.ser.gz"
-      val wikiDBPath = "data/wikipedia/wiki-model-ace-aux.ser.gz"
+    val wikiDBPath = "models/wiki-db-ace.ser.gz"
     val docs = ConllDocReader.loadRawConllDocsWithSuffix(dataPath, -1, "", Language.ENGLISH);
-    val goldWikification = GUtil.load(wikiAnnotsPath).asInstanceOf[CorpusWikiAnnots];
+//    val goldWikification = GUtil.load(wikiAnnotsPath).asInstanceOf[CorpusWikiAnnots];
+    
+    val wikiPath = "data/ace05/ace05-all-conll-wiki"
+    val goldWikification = WikiAnnotReaderWriter.readStandoffAnnotsAsCorpusAnnots(wikiPath)
+    
     // Detect mentions, which depend on the NER coarse pass
     val assembler = CorefDocAssembler(Language.ENGLISH, true);
     val corefDocs = docs.map(doc => assembler.createCorefDoc(doc, new MentionPropertyComputer(None)));
@@ -33,7 +35,7 @@ object ACETester {
 //    val trainCorefDocs = trainDocs.map(doc => assembler.createCorefDoc(doc, new MentionPropertyComputer(None)));
 //    val wikifier = new BasicWikifier(wikiDB, Some(trainCorefDocs), Some(goldWikification));
     
-    val UseFancyQueryChooser = true;
+    val UseFancyQueryChooser = false;
     val queryChooser = if (UseFancyQueryChooser) {
       GUtil.load("models/querychooser.ser.gz").asInstanceOf[QueryChooser]
     } else {

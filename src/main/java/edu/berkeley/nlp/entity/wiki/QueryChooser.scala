@@ -276,9 +276,11 @@ object QueryChooser {
   
   def main(args: Array[String]) {
     LightRunner.initializeOutput(QueryChooser.getClass());
-    val wikiAnnotsPath = "data/ace05/ace-annots-multi.ser"
-    val wikiDBPath = "data/wikipedia/wiki-model-ace-aux.ser.gz"
-    val goldWikification = GUtil.load(wikiAnnotsPath).asInstanceOf[CorpusWikiAnnots];
+//    val wikiAnnotsPath = "data/ace05/ace-annots-multi.ser"
+    val wikiPath = "data/ace05/ace05-all-conll-wiki"
+    val wikiDBPath = "models/wiki-db-ace.ser.gz"
+//    val goldWikification = GUtil.load(wikiAnnotsPath).asInstanceOf[CorpusWikiAnnots];
+    val goldWikification = WikiAnnotReaderWriter.readStandoffAnnotsAsCorpusAnnots(wikiPath)
     val wikiDB = GUtil.load(wikiDBPath).asInstanceOf[WikipediaInterface];
     
     val assembler = CorefDocAssembler(Language.ENGLISH, true);

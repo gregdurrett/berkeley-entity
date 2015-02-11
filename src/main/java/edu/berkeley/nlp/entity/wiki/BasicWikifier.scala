@@ -157,19 +157,19 @@ class BasicWikifier(val wikiDB: WikipediaInterface,
     }
     val allOptionsUnreasonable = wikiDB.disambiguateBestGetAllOptions(ment, getHeadIdxToUse(docName, ment))
     // Could only get it using an "unreasonable" query
-    if (!containsCorrect(goldTitles, allOptions.keySet.asScala) && containsCorrect(goldTitles, allOptionsUnreasonable.keySet.asScala)) {
-      val queries = Query.extractQueriesBest(ment).map(_.getFinalQueryStr);
-      Logger.logss("Queries: " + queries);
-      for (query <- queries) {
-        val counter = wikiDB.titleGivenSurfaceDB.surfaceToTitle.getCounter(query);
-        if (!counter.isEmpty) {
-          Logger.logss("  Query: " + query);
-          Logger.logss("  Raw counter: " + counter);
-          Logger.logss("  Redirected: " + wikiDB.redirectsDB.followRedirectsCounter(counter));
-        }
-      }
-      Logger.logss("Unrecalled by reasonable: [" + ment.spanToString + "], gold titles = " + goldTitles);
-    }
+//    if (!containsCorrect(goldTitles, allOptions.keySet.asScala) && containsCorrect(goldTitles, allOptionsUnreasonable.keySet.asScala)) {
+//      val queries = Query.extractQueriesBest(ment).map(_.getFinalQueryStr);
+//      Logger.logss("Queries: " + queries);
+//      for (query <- queries) {
+//        val counter = wikiDB.titleGivenSurfaceDB.surfaceToTitle.getCounter(query);
+//        if (!counter.isEmpty) {
+//          Logger.logss("  Query: " + query);
+//          Logger.logss("  Raw counter: " + counter);
+//          Logger.logss("  Redirected: " + wikiDB.redirectsDB.followRedirectsCounter(counter));
+//        }
+//      }
+//      Logger.logss("Unrecalled by reasonable: [" + ment.spanToString + "], gold titles = " + goldTitles);
+//    }
     val allOptionsOneBest = wikiDB.disambiguateBestGetAllOneBestOptions(ment, getHeadIdxToUse(docName, ment))
     if (containsCorrect(goldTitles, allOptionsOneBest.keySet.asScala)) {
       oracleOneBestCorrect += 1;
