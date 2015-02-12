@@ -4,6 +4,12 @@ import scala.collection.mutable.ArrayBuffer
 import edu.berkeley.nlp.entity.coref.Mention
 import edu.berkeley.nlp.futile.util.Logger
 
+/**
+ * Simple data structure to store information about a query to the Wikipedia
+ * title given surface database formed from a particular mention.
+ * 
+ * @author gdurrett
+ */
 case class Query(val words: Seq[String],
                  val originalMent: Mention,
                  val finalSpan: (Int, Int),
@@ -26,6 +32,8 @@ object Query {
     new Query(Seq[String]("XXNILXX"), ment, (ment.headIdx + 1, ment.headIdx + 1), "NIL");
   }
   
+  // These parameter settings have been tuned to give best performance on query extraction
+  // for ACE, so are probably good there but might need to be revisited in other settings.
   val CapitalizationQueryExpand = false;
   val PluralQueryExpand = true;
   val RemovePuncFromQuery = true;
@@ -34,10 +42,17 @@ object Query {
   val BlackList = Set("the", "a", "my", "your", "his", "her", "our", "their", "its", "this", "that", "these", "those")
   val PuncList = Set(',', '.', '!', '?', ':', ';', '\'', '"', '(', ')', '[', ']', '{', '}', ' ');
   
+  /**
+   * Check if a token is "blacklisted", meaning that we shouldn't form a query that starts with
+   * it (such queries tend to do weird and bad things
+   */
   def isBlacklisted(word: String, mentStartIdx: Int) = {
     BlackList.contains(word) || (mentStartIdx == 0 && BlackList.contains(word.toLowerCase));
   }
   
+  /**
+   * Very crappy stemmer
+   */
   def removePlural(word: String) = {
     if (word.endsWith("sses")) {
       word.dropRight(2);
@@ -51,6 +66,11 @@ object Query {
     }
   }
   
+  /**
+   * Given a mention, extracts the set of possible queries that we'll consider. This is done by
+   * considering different subsets of the words in the mention and munging capitalization and
+   * stemming, since lowercasing and dropping a plural-marking "s" are useful for nominals.
+   */
   def extractQueriesBest(ment: Mention, addNilQuery: Boolean = false): Seq[Query] = {
     val queries = new ArrayBuffer[Query];
     val mentWords = ment.words;

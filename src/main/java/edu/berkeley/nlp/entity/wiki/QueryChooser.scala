@@ -324,7 +324,6 @@ object QueryChooser {
   }
   
   def evaluate(testExs: Seq[QueryChoiceExample], qcComputer: QueryChoiceComputer, weights: Array[Float], wikiDB: WikipediaInterface, print: Boolean = false) {
-    
     var numCorrect = 0;
     var numCorrectNil = 0;
     var numNil = 0;
