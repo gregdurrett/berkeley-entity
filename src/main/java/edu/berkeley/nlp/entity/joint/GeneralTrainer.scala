@@ -46,10 +46,12 @@ class GeneralTrainer[T] {
       adagradNanos = 0;
       Logger.startTrack("Computing gradient");
       var currIdx = 0;
+      var currBatchIdx = 0;
+      val printFreq = (trainExs.size / batchSize) / 10 // Print progress 10 times per pass through the data
       while (currIdx < trainExs.size) {
-//        if (currIdx % 100 == 0) {
+        if (printFreq == 0 || currBatchIdx % printFreq == 0) {
           Logger.logs("Computing gradient on " + currIdx);
-//        }
+        }
         takeAdagradStepL1R(trainExs.slice(currIdx, Math.min(trainExs.size, currIdx + batchSize)),
                            computer,
                            weights,
@@ -59,6 +61,7 @@ class GeneralTrainer[T] {
                            lambda);
 //        }
         currIdx += batchSize;
+        currBatchIdx += 1;
       }
       Logger.endTrack();
       Logger.logss("NONZERO WEIGHTS: " + weights.foldRight(0)((weight, count) => if (Math.abs(weight) > 1e-15) count + 1 else count));

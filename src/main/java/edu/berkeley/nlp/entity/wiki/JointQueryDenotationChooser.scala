@@ -185,7 +185,7 @@ object JointQueryDenotationChooser {
   val wikiDBPath = "models/wiki-db-ace.ser.gz"
   
   val lambda = 1e-8F
-  val batchSize = 100
+  val batchSize = 1
   val numItrs = 20
   
   def main(args: Array[String]) {
