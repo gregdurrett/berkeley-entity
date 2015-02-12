@@ -164,17 +164,18 @@ class QueryChoiceComputer(val wikiDB: WikipediaInterface,
   }
   
   def extractDenotationSetWithNil(queries: Seq[Query], queryDisambigs: Seq[Counter[String]], maxDenotations: Int): Seq[String] = {
-    val choicesEachQuery = queryDisambigs.map(_.getSortedKeys().asScala);
-    val optionsAndPriorities = (0 until queryDisambigs.size).flatMap(i => {
-      val sortedKeys = queryDisambigs(i).getSortedKeys().asScala
-      (0 until sortedKeys.size).map(j => (sortedKeys(j), j * 1000 + i));
-    });
-//    choicesEachQuery.foreach(Logger.logss(_));
-//    Logger.logss(optionsAndPriorities);
-    val allFinalOptions = Seq(NilToken) ++ optionsAndPriorities.sortBy(_._2).map(_._1).distinct;
-    val finalOptionsTruncated = allFinalOptions.slice(0, Math.min(allFinalOptions.size, maxDenotations));
-//    Logger.logss(finalOptions);
-    finalOptionsTruncated;
+    Query.extractDenotationSetWithNil(queries, queryDisambigs, maxDenotations);
+//    val choicesEachQuery = queryDisambigs.map(_.getSortedKeys().asScala);
+//    val optionsAndPriorities = (0 until queryDisambigs.size).flatMap(i => {
+//      val sortedKeys = queryDisambigs(i).getSortedKeys().asScala
+//      (0 until sortedKeys.size).map(j => (sortedKeys(j), j * 1000 + i));
+//    });
+////    choicesEachQuery.foreach(Logger.logss(_));
+////    Logger.logss(optionsAndPriorities);
+//    val allFinalOptions = Seq(NilToken) ++ optionsAndPriorities.sortBy(_._2).map(_._1).distinct;
+//    val finalOptionsTruncated = allFinalOptions.slice(0, Math.min(allFinalOptions.size, maxDenotations));
+////    Logger.logss(finalOptions);
+//    finalOptionsTruncated;
   }
   
   def getNormalizedLogScores(ex: QueryChoiceExample, weights: Array[Float]) = {

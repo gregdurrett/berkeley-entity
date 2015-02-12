@@ -1,8 +1,10 @@
 package edu.berkeley.nlp.entity.wiki
 
+import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import edu.berkeley.nlp.entity.coref.Mention
 import edu.berkeley.nlp.futile.util.Logger
+import edu.berkeley.nlp.futile.util.Counter
 
 /**
  * Simple data structure to store information about a query to the Wikipedia
@@ -104,5 +106,19 @@ object Query {
 //      queries;
 //    }
     queries.filter(!_.getFinalQueryStr.isEmpty) ++ (if (addNilQuery) Seq(Query.makeNilQuery(ment)) else Seq[Query]());
+  }
+  
+  def extractDenotationSetWithNil(queries: Seq[Query], queryDisambigs: Seq[Counter[String]], maxDenotations: Int): Seq[String] = {
+    val choicesEachQuery = queryDisambigs.map(_.getSortedKeys().asScala);
+    val optionsAndPriorities = (0 until queryDisambigs.size).flatMap(i => {
+      val sortedKeys = queryDisambigs(i).getSortedKeys().asScala
+      (0 until sortedKeys.size).map(j => (sortedKeys(j), j * 1000 + i));
+    });
+//    choicesEachQuery.foreach(Logger.logss(_));
+//    Logger.logss(optionsAndPriorities);
+    val allFinalOptions = Seq(NilToken) ++ optionsAndPriorities.sortBy(_._2).map(_._1).distinct;
+    val finalOptionsTruncated = allFinalOptions.slice(0, Math.min(allFinalOptions.size, maxDenotations));
+//    Logger.logss(finalOptions);
+    finalOptionsTruncated;
   }
 }

@@ -23,7 +23,8 @@ import edu.berkeley.nlp.entity.joint.GeneralTrainer
  */
 case class JointQueryDenotationExample(val queries: Seq[Query],
                                        val allDenotations: Seq[String],
-                                       val correctDenotations: Seq[String]) {
+                                       val correctDenotations: Seq[String],
+                                       val rawCorrectDenotations: Seq[String]) {
   
   val correctDenotationIndices = allDenotations.zipWithIndex.filter(denotationAndIdx => correctDenotations.contains(denotationAndIdx._1)).map(_._2) 
   
@@ -134,7 +135,7 @@ class JointQueryDenotationChooser(val featureIndexer: Indexer[String],
   def pickDenotation(queries: Seq[Query], wikiDB: WikipediaInterface): String = {
     val computer = new JointQueryDenotationChoiceComputer(wikiDB, featureIndexer);
     val denotations = queries.map(query => wikiDB.disambiguateBestNoDisambig(query));
-    val ex = new JointQueryDenotationExample(queries, denotations, Array[String]());
+    val ex = new JointQueryDenotationExample(queries, denotations, Array[String](), Array[String]());
     computer.computeDenotation(ex, weights)
   }
 }
@@ -145,7 +146,7 @@ object JointQueryDenotationChooser {
    * Extracts an isolated set of entity linking examples from coreference documents
    * and standoff entity link annotations.
    */
-  def extractExamples(corefDocs: Seq[CorefDoc], goldWikification: CorpusWikiAnnots, wikiDB: WikipediaInterface) = {
+  def extractExamples(corefDocs: Seq[CorefDoc], goldWikification: CorpusWikiAnnots, wikiDB: WikipediaInterface, filterImpossible: Boolean = false) = {
     val exs = new ArrayBuffer[JointQueryDenotationExample];
     var numImpossible = 0;
     // Go through all mentions in all documents
@@ -161,14 +162,17 @@ object JointQueryDenotationChooser {
           val goldLabel = getGoldWikification(goldWikification(docName), ment)
           if (goldLabel.size >= 1) {
             val queries = Query.extractQueriesBest(ment, true);
-            val denotations = queries.map(wikiDB.disambiguateBestNoDisambig(_));
+            val queryDisambigs = queries.map(wikiDB.disambiguateBestGetAllOptions(_));
+//            val denotations = queries.map(wikiDB.disambiguateBestNoDisambig(_));
+            val denotations = Query.extractDenotationSetWithNil(queries, queryDisambigs, maxNumWikificationOptions);
             val correctDenotations = denotations.filter(denotation => isCorrect(goldLabel, denotation))
             // N.B. The use of "isCorrect" here is needed to canonicalize 
             val correctIndices = denotations.zipWithIndex.filter(denotationIdx => isCorrect(goldLabel, denotationIdx._1)).map(_._2);
-            if (!correctIndices.isEmpty) {
-              exs += new JointQueryDenotationExample(queries, denotations, correctDenotations)
-            } else {
+//            if (correctIndices.isEmpty && 
+            if (filterImpossible && correctIndices.isEmpty) {
               numImpossible += 1;
+            } else {
+              exs += new JointQueryDenotationExample(queries, denotations, correctDenotations, goldLabel)
             }
           }
         }
@@ -188,6 +192,8 @@ object JointQueryDenotationChooser {
   val batchSize = 1
   val numItrs = 20
   
+  val maxNumWikificationOptions = 7
+  
   def main(args: Array[String]) {
     LightRunner.initializeOutput(JointQueryDenotationChooser.getClass());
     LightRunner.populateScala(JointQueryDenotationChooser.getClass(), args)
@@ -196,14 +202,13 @@ object JointQueryDenotationChooser {
     val trainDocs = ConllDocReader.loadRawConllDocsWithSuffix(trainDataPath, -1, "", Language.ENGLISH);
     val trainCorefDocs = trainDocs.map(doc => assembler.createCorefDoc(doc, new MentionPropertyComputer(None)));
     
-    val testDocs = ConllDocReader.loadRawConllDocsWithSuffix(testDataPath, -1, "", Language.ENGLISH);
-    val testCorefDocs = testDocs.map(doc => assembler.createCorefDoc(doc, new MentionPropertyComputer(None)));
-    
     // Read in gold Wikification labels
     val goldWikification = WikiAnnotReaderWriter.readStandoffAnnotsAsCorpusAnnots(wikiPath)
     // Read in the title given surface database
     val wikiDB = GUtil.load(wikiDBPath).asInstanceOf[WikipediaInterface];
-    val trainExs = extractExamples(trainCorefDocs, goldWikification, wikiDB)
+    // Make training examples, filtering out those with solutions that are unreachable because
+    // they're not good for training
+    val trainExs = extractExamples(trainCorefDocs, goldWikification, wikiDB, filterImpossible = true)
     
     // Extract features
     val featIndexer = new Indexer[String]
@@ -219,12 +224,16 @@ object JointQueryDenotationChooser {
     val chooser = new JointQueryDenotationChooser(featIndexer, weights)
     
     // Build the test examples and decode the test set
-    val testExs = extractExamples(testCorefDocs, goldWikification, wikiDB);
-    val goldTestDenotationsAsTrivialChunks = (0 until testExs.size).map(i => new Chunk[Seq[String]](i, i+1, testExs(i).correctDenotations))
+    // No filtering now because we're doing test
+    val testDocs = ConllDocReader.loadRawConllDocsWithSuffix(testDataPath, -1, "", Language.ENGLISH);
+    val testCorefDocs = testDocs.map(doc => assembler.createCorefDoc(doc, new MentionPropertyComputer(None)));
+    val testExs = extractExamples(testCorefDocs, goldWikification, wikiDB, filterImpossible = false);
+    val goldTestDenotationsAsTrivialChunks = (0 until testExs.size).map(i => new Chunk[Seq[String]](i, i+1, testExs(i).rawCorrectDenotations))
     val predTestDenotationsAsTrivialChunks = (0 until testExs.size).map(i => new Chunk[String](i, i+1, chooser.pickDenotation(testExs(i).queries, wikiDB)))
     
     // Hacky but lets us reuse some code that normally evaluates things with variable endpoints
-    WikificationEvaluator.evaluateWikiChunksBySent(Seq(goldTestDenotationsAsTrivialChunks), Seq(predTestDenotationsAsTrivialChunks))
+//    WikificationEvaluator.evaluateWikiChunksBySent(Seq(goldTestDenotationsAsTrivialChunks), Seq(predTestDenotationsAsTrivialChunks))
+    WikificationEvaluator.evaluateFahrniMetrics(Seq(goldTestDenotationsAsTrivialChunks), Seq(predTestDenotationsAsTrivialChunks), Set())
     
     LightRunner.finalizeOutput();
   }
