@@ -2,13 +2,13 @@ package edu.berkeley.nlp.entity.ner
 
 import edu.berkeley.nlp.entity.ConllDocReader
 import edu.berkeley.nlp.futile.util.Logger
-import edu.berkeley.nlp.entity.ConllDoc
+import edu.berkeley.nlp.entity.Document
 import edu.berkeley.nlp.futile.syntax.Trees.PennTreeRenderer
 import edu.berkeley.nlp.futile.fig.basic.IOUtils
 
 object NESentenceMunger {
   
-  def writeSentences(file: String, docs: Seq[ConllDoc]) {
+  def writeSentences(file: String, docs: Seq[Document]) {
     val out = IOUtils.openOutHard(file);
     for (doc <- docs; words <- doc.words) {
       out.println(words.foldLeft("")(_ + " " + _).trim);

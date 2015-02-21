@@ -10,9 +10,9 @@ import edu.berkeley.nlp.futile.syntax.Trees.PennTreeRenderer
 import edu.berkeley.nlp.futile.util.Counter
 import edu.berkeley.nlp.futile.util.Logger
 import edu.berkeley.nlp.entity.GUtil
-import edu.berkeley.nlp.entity.ConllDoc
+import edu.berkeley.nlp.entity.Document
 
-case class CorefDoc(val rawDoc: ConllDoc,
+case class CorefDoc(val rawDoc: Document,
                     val goldMentions: Seq[Mention],
                     val goldClustering: OrderedClustering,
                     val predMentions: Seq[Mention]) {

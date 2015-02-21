@@ -5,9 +5,8 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.HashMap
 import edu.berkeley.nlp.PCFGLA.CoarseToFineMaxRuleParser
-import edu.berkeley.nlp.entity.ConllDocReader
+import edu.berkeley.nlp.entity.{WikiDocReader, ConllDocReader, GUtil}
 import edu.berkeley.nlp.entity.coref.CorefDocAssembler
-import edu.berkeley.nlp.entity.GUtil
 import edu.berkeley.nlp.entity.coref.Mention
 import edu.berkeley.nlp.entity.coref.MentionPropertyComputer
 import edu.berkeley.nlp.entity.lang.Language
@@ -221,11 +220,15 @@ object WikipediaInterface {
       } else if (WikipediaInterface.mentionType == "ontonotes") {
         // OntoNotes: use only auto_conll and pred mentions
         ConllDocReader.loadRawConllDocsWithSuffix(path, -1, docSuffix, Language.ENGLISH).map(doc => pmAssembler.createCorefDoc(doc, mentionPropertyComputer));
+      } else if (WikipediaInterface.mentionType == "wikipedia") {
+        WikiDocReader.loadRawWikiDocs(path, -1, docSuffix, Language.ENGLISH).map(doc => pmAssembler.createCorefDoc(doc, mentionPropertyComputer))
       } else {
         throw new RuntimeException("Unrecognized mention type: " + WikipediaInterface.mentionType);
       }
     });
 //    val queries = corefDocs.flatMap(_.predMentions.filter(!_.mentionType.isClosedClass)).flatMap(ment => WikipediaTitleGivenSurfaceDB.extractQueries(ment, ment.headIdx)).toSet;
+
+    // MFL TODO: this is the queries that will have to be rewritten to support the wiki documents.
     val queries = corefDocs.flatMap(_.predMentions.filter(!_.mentionType.isClosedClass)).flatMap(ment => Query.extractQueriesBest(ment).map(_.getFinalQueryStr)).toSet;
     Logger.logss("Extracted " + queries.size + " queries from " + corefDocs.size + " documents");
     val interface = if (WikipediaInterface.categoryDBInputPath != "") {

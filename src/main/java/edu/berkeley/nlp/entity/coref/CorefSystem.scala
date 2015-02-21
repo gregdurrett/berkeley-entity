@@ -39,7 +39,7 @@ import edu.berkeley.nlp.entity.xdistrib.DocumentGraphComponents
 import edu.berkeley.nlp.futile.fig.exec.Execution
 import edu.berkeley.nlp.entity.Driver
 import edu.berkeley.nlp.entity.GUtil
-import edu.berkeley.nlp.entity.ConllDoc
+import edu.berkeley.nlp.entity.Document
 import edu.berkeley.nlp.entity.WordNetInterfacer
 import edu.berkeley.nlp.entity.ConllDocWriter
 import edu.berkeley.nlp.entity.ConllDocReader
