@@ -34,12 +34,12 @@ class WikiDocReader (val lang : Language, val betterParsesFile : String = "") {
     //val splits = sentenceSplitter.formCanonicalizedParagraphs(document.split(" "), false, false)
     val splits  = sentenceSplitter.splitSentences(document.split("\n").filter(!_.trim.isEmpty))
 
-    
+
 
     for(reference <- refxml \ "ReferenceInstance") {
       val surfaceForm = (reference \ "SurfaceForm")(0).text.trim
-      val offset = (reference \ "offset")(0).text.trim.toInt
-      val length = (reference \ "length")(0).text.trim.toInt
+      val offset = (reference \ "Offset")(0).text.trim.toInt
+      val length = (reference \ "Length")(0).text.trim.toInt
       val chosenAnnotation = (reference \ "ChosenAnnotation")(0).text.trim
       val annotatorId = (reference \ "AnnotatorId")(0).text.trim
       val annotation = (reference \ "Annotation")(0).text.trim
