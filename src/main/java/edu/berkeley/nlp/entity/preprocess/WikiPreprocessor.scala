@@ -7,7 +7,7 @@ import edu.berkeley.nlp.entity.lang.ModCollinsHeadFinder
 import edu.berkeley.nlp.entity.{DepConstTree, WikiDoc, Chunk, WikiDocReader}
 import edu.berkeley.nlp.entity.ner.NerSystemLabeled
 import edu.berkeley.nlp.futile.util.Logger
-import edu.berkeley.nlp.syntax.Tree
+import edu.berkeley.nlp.futile.syntax.Tree
 import edu.berkeley.nlp.futile.fig.basic.Indexer
 
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
@@ -197,12 +197,13 @@ object WikiPreprocessor {
         m
     })
 
-    val parses : Array[Tree[String]] = tokens.map(t => PreprocessingDriver.parse(parser, backoffParser, t.toList.asJava))
+    val parses : Array[Tree[String]] = tokens.map(t => Reprocessor.convertToFutileTree(
+      PreprocessingDriver.parse(parser, backoffParser, t.toList.asJava)))
     // ... filter out the ones where the parses don't match, idk how that is going to effect
     val tps = (tokens, parses, 0 until tokens.size).zipped
       .filter((a,b,c) => a.length == b.getYield.size)
 
-    //val indexer = new Indexer[String]()
+    val indexer = new Indexer[String]()
 
     val pos = tps._2.map(t => { new ArrayBuffer[String] ++ t.getPreTerminalYield.asScala })
 
@@ -211,19 +212,19 @@ object WikiPreprocessor {
       new DepConstTree(tps._2(i), pos(i), tps._1(i), childParentMap)
     }
 
+    val empty = tps._1.map(l => (0 until l.length).map(a=>"-")).toSeq
+
     val wikiDoc = new WikiDoc(
       docID=inputFile,
       docPartNo=refname.toInt,
       words=tps._1.toSeq.map(_.toSeq),
-      pos=null, // todo
-      trees=tps._2.toSeq.map(t => {
-        new DepConstTree(t, )
-      }),
-      nerChunks=null, // todo
+      pos=pos,
+      trees=trees,
+      nerChunks=tps._1.map(a=>Seq()), // todo
       corefChunks=tps._3.map(i => {
-        refsorted(i).map(_.hashCode).asInstanceOf[Seq[Int]]
-      }).asInstanceOf[Seq[Seq[Int]]],
-      speakers=null,
+        refsorted(i).map(c => new Chunk(c.start, c.end, indexer.getIndex(c.label)))
+      }),
+      speakers=empty, // todo?
       wikiRefChunks=tps._3.map(refsorted(_))
     )
 
