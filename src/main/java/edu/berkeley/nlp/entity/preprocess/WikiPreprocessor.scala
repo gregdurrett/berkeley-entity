@@ -3,11 +3,14 @@ package edu.berkeley.nlp.entity.preprocess
 import java.io.File
 
 import edu.berkeley.nlp.PCFGLA.CoarseToFineMaxRuleParser
-import edu.berkeley.nlp.entity.{Chunk, WikiDocReader}
+import edu.berkeley.nlp.entity.lang.ModCollinsHeadFinder
+import edu.berkeley.nlp.entity.{DepConstTree, WikiDoc, Chunk, WikiDocReader}
 import edu.berkeley.nlp.entity.ner.NerSystemLabeled
 import edu.berkeley.nlp.futile.util.Logger
 import edu.berkeley.nlp.syntax.Tree
+import edu.berkeley.nlp.futile.fig.basic.Indexer
 
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.xml._
 import scala.concurrent._
 import scala.collection.JavaConverters._
@@ -18,6 +21,8 @@ import ExecutionContext.Implicits.global
  * Created by matthew on 2/21/15.
  */
 object WikiPreprocessor {
+
+  val headFinder = new ModCollinsHeadFinder()
 
   def processesDocs (inputDir : String, outputDir : String,
                      docReader : WikiDocReader,
@@ -40,6 +45,43 @@ object WikiPreprocessor {
               parser : CoarseToFineMaxRuleParser,
               backoffParser : CoarseToFineMaxRuleParser,
               nerSystem : NerSystemLabeled) = {
+    val wdoc = mkWikiDoc(inputFile, docReader, splitter, parser, backoffParser, nerSystem)
+
+  }
+
+  def wikiToLines(wdoc : WikiDoc) : Seq[Seq[String]] = {
+    val ret = ListBuffer[Array[String]]()
+    for(i <- 0 until wdoc.words.size) {
+    //  val rend = PreprocessingDriver.renderSentenceConllLines(wdoc.docID, 0, wdoc.words(i), )
+      //ret.append("test")
+    }
+    ret.toSeq.map(_.toSeq)
+  }
+
+  def computeCorefBits[T](cr : Seq[Chunk[T]]) : Array[String] = {
+    var ret = new Array[String](cr.size)
+    for(i <- 0 until cr.size) {
+      var sb = new StringBuilder
+      for(c <- cr) {
+
+        if(c.start == i) {
+          sb.append("(")
+          sb.append(c.label)
+        }
+        if(c.end == i + 1)
+          sb.append(")")
+
+      }
+    }
+    ret
+  }
+
+  def mkWikiDoc(inputFile : String,
+              docReader : WikiDocReader,
+              splitter : SentenceSplitter,
+              parser : CoarseToFineMaxRuleParser,
+              backoffParser : CoarseToFineMaxRuleParser,
+              nerSystem : NerSystemLabeled) : WikiDoc = {
     /*String docName = inputPath;
     String[] lines = IOUtils.readLinesHard(inputPath).toArray(new String[0]);
     String[] canonicalizedParagraphs = splitter.formCanonicalizedParagraphs(lines, respectInputLineBreaks, respectInputTwoLineBreaks);
@@ -87,6 +129,8 @@ object WikiPreprocessor {
     val referencesFile = inputFile.replace("RawTexts", "Problems")
     val refxml = XML.loadFile(referencesFile)
     val document = scala.io.Source.fromFile(inputFile).mkString.split("\n")
+    val refname = (refxml \ "ReferenceFileName")(0).text.trim
+
 
     val references = (refxml \ "ReferenceInstance").map(r => (
       (r \ "SurfaceForm")(0).text.trim,
@@ -125,7 +169,7 @@ object WikiPreprocessor {
           var best_rank = Double.NegativeInfinity
 
           for(j <- 0 until tokens(i).size) {
-            val r = rank_match(i,j) * Math.abs(ll - tcnt) // try and make the item close to where it should be
+            val r = rank_match(i,j) / Math.abs(ll - tcnt) // try and make the item close to where it should be
             if(r > best_rank) {
               best_start = j
               best_rank = r
@@ -155,13 +199,37 @@ object WikiPreprocessor {
 
     val parses : Array[Tree[String]] = tokens.map(t => PreprocessingDriver.parse(parser, backoffParser, t.toList.asJava))
     // ... filter out the ones where the parses don't match, idk how that is going to effect
-    var tps = (tokens zip parses).filter((t) => t._1.length == t._2.getYield.size)
+    val tps = (tokens, parses, 0 until tokens.size).zipped
+      .filter((a,b,c) => a.length == b.getYield.size)
+
+    //val indexer = new Indexer[String]()
+
+    val pos = tps._2.map(t => { new ArrayBuffer[String] ++ t.getPreTerminalYield.asScala })
+
+    val trees = for(i <- 0 until tps._1.size) yield {
+      val childParentMap = DepConstTree.extractDependencyStructure(tps._2(i), headFinder)
+      new DepConstTree(tps._2(i), pos(i), tps._1(i), childParentMap)
+    }
+
+    val wikiDoc = new WikiDoc(
+      docID=inputFile,
+      docPartNo=refname.toInt,
+      words=tps._1.toSeq.map(_.toSeq),
+      pos=null, // todo
+      trees=tps._2.toSeq.map(t => {
+        new DepConstTree(t, )
+      }),
+      nerChunks=null, // todo
+      corefChunks=tps._3.map(i => {
+        refsorted(i).map(_.hashCode).asInstanceOf[Seq[Int]]
+      }).asInstanceOf[Seq[Seq[Int]]],
+      speakers=null,
+      wikiRefChunks=tps._3.map(refsorted(_))
+    )
 
     Logger.logss("done with "+inputFile)
 
-
-
-
+    wikiDoc
   }
 
 }

@@ -8,13 +8,13 @@ trait Document {
   def docPartNo : Int
   // arrays of words in each sentence including punc
   def words : Seq[Seq[String]]
-  // the gram types of the words
+  // the grammar types of the words
   def pos : Seq[Seq[String]]
   // parse trees of each sentence
   def trees : Seq[DepConstTree]
   // I am guessing the type of the chunk eg: ORG-NAM
   def nerChunks : Seq[Seq[Chunk[String]]]
-  // have ranges and identifiers for the unique item that they are referenceing
+  // have ranges and identifiers for the unique item that they are referencing
   // appears [start, end)
   def corefChunks : Seq[Seq[Chunk[Int]]]
   // just use "-" for each in the case that the speaker is unknown

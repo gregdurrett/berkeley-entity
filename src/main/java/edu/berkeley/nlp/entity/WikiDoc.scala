@@ -10,7 +10,8 @@ case class WikiDoc (docID : String,
                     trees: Seq[DepConstTree],
                     nerChunks : Seq[Seq[Chunk[String]]],
                     corefChunks : Seq[Seq[Chunk[Int]]],
-                    speakers : Seq[Seq[String]] ) extends Document {
+                    speakers : Seq[Seq[String]],
+                    wikiRefChunks : Seq[Seq[Chunk[String]]] ) extends Document {
 
   override val numSents = words.size;
 
@@ -30,5 +31,6 @@ case class WikiDoc (docID : String,
 
   override def getCorrespondingNERChunk(sentIdx: Int, headIdx: Int): Option[Chunk[String]] = None;
 
+  //override def corefChunks = throw new NotImplementedError()
 
 }
