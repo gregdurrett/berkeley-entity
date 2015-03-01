@@ -26,7 +26,7 @@ import edu.berkeley.nlp.entity.wiki._
  * java -cp /path/to/jar -Xmx8g edu.berkeley.nlp.entity.wiki.WikipediaInterface \
  *  -datasetPaths path/to/test-docs-directory-one-doc-per-file,path/to/additional/docs,... \
  *  -wikipediaDumpPath path/to/enwiki-latest-pages-articles.xml
- *  -outputDir path/to/output-file.ser.gz
+ *  -outputPath path/to/output-file.ser.gz
  *
  * Required arguments:
  * -datasetPaths: pointer to CoNLL-formatted files whose mentions we should extract

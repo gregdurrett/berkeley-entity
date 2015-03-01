@@ -91,7 +91,7 @@ object WikiPreprocessor {
           parseBits(j) + "\t" +
           "\t-\t-\t-\t" +
           "-\t" + // speakers
-          "-\t" + // nerbit
+          "*\t" + // nerbit
           corefBits(j) + "\t" // coref bits
         )
       }
@@ -135,23 +135,6 @@ object WikiPreprocessor {
     ret.toSeq
   }
 
-//  def computeCorefBits[T](cr : Seq[Chunk[T]]) : Array[String] = {
-//    var ret = new Array[String](cr.size)
-//    for(i <- 0 until cr.size) {
-//      var sb = new StringBuilder
-//      for(c <- cr) {
-//
-//        if(c.start == i) {
-//          sb.append("(")
-//          sb.append(c.label)
-//        }
-//        if(c.end == i + 1)
-//          sb.append(")")
-//
-//      }
-//    }
-//    ret
-//  }
 
   def mkWikiDoc(inputFile : String,
               docReader : WikiDocReader,
@@ -159,48 +142,6 @@ object WikiPreprocessor {
               parser : CoarseToFineMaxRuleParser,
               backoffParser : CoarseToFineMaxRuleParser,
               nerSystem : NerSystemLabeled) : WikiDoc = {
-    /*String docName = inputPath;
-    String[] lines = IOUtils.readLinesHard(inputPath).toArray(new String[0]);
-    String[] canonicalizedParagraphs = splitter.formCanonicalizedParagraphs(lines, respectInputLineBreaks, respectInputTwoLineBreaks);
-    String[] sentences = null;
-    if (skipSentenceSplitting) {
-      sentences = canonicalizedParagraphs;
-    } else {
-      sentences = splitter.splitSentences(canonicalizedParagraphs);
-    }
-    String[][] tokenizedSentences = (useAlternateTokenizer ? splitter.tokenizeAlternate(sentences) : splitter.tokenize(sentences));
-    Logger.logss("Document " + docName + " contains " + lines.length + " lines and " + tokenizedSentences.length + " sentences");
-    String[][] docConllLines = renderDocConllLines(docName, tokenizedSentences, parser, backoffParser, nerSystem);
-    writeConllLines(docName, docConllLines, outputPath);
-*/
-
-     /*
-        String[][] conllLines = new String[tokenizedSentences.length][];
-    for (int sentIdx = 0; sentIdx < tokenizedSentences.length; sentIdx++) {
-      String[] tokenizedSentence = tokenizedSentences[sentIdx];
-      Tree<String> parse = parse(parser, backoffParser, Arrays.asList(tokenizedSentence));
-      if (parse.getYield().size() != tokenizedSentence.length) {
-        Logger.logss("WARNING: couldn't parse sentence, dropping it: " + Arrays.toString(tokenizedSentence));
-        Logger.logss("  (This will be fixed to backing off to an X-bar grammar in a future release)");
-      } else {
-        String[] posTags = new String[tokenizedSentence.length];
-        List<String> preterminals = parse.getPreTerminalYield();
-        for (int i = 0; i < preterminals.size(); i++) {
-          posTags[i] = preterminals.get(i);
-        }
-        String[] nerBioLabels = null;
-        if (nerSystem != null) {
-          nerBioLabels = nerSystem.tagBIO(tokenizedSentence, posTags);
-        } else {
-          nerBioLabels = new String[tokenizedSentence.length];
-          Arrays.fill(nerBioLabels, "O");
-        }
-        conllLines[sentIdx] = renderSentenceConllLines(docName, 0, tokenizedSentence, posTags, parse, nerBioLabels);
-      }
-    }
-    return conllLines;
-
-    */
 
     Logger.logss("starting processing of " + inputFile)
     val referencesFile = inputFile.replace("RawTexts", "Problems")

@@ -296,9 +296,18 @@ object ConllDocReader {
     var docCounter = 0;
     var fileIdx = 0;
     while (fileIdx < files.size && (size == -1 || docCounter < size)) {
-      val newDocs = reader.readConllDocs(files(fileIdx).getAbsolutePath);
-      docs ++= newDocs;
-      docCounter += newDocs.size
+      val pp = files(fileIdx).getAbsolutePath
+      try {
+        Logger.logss("Loading doc: " + pp)
+        val newDocs = reader.readConllDocs(pp);
+        docs ++= newDocs;
+        docCounter += newDocs.size
+      } catch {
+        case e : Exception => {
+          Logger.logss("failed document "+pp)
+          e.printStackTrace(System.err)
+        }
+      }
       fileIdx += 1;
     }
     val numDocs = if (size == -1) docs.size else Math.min(size, files.size);
