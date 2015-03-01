@@ -35,7 +35,16 @@ object WikiPreprocessor {
       val input_file = file.getAbsolutePath
       val output_file = outputDir + file.getName
       Future {
-        process(input_file, output_file, docReader, splitter, parser, backoffParser, nerSystem)
+        try {
+          process(input_file, output_file, docReader, splitter, parser.newInstance, backoffParser.newInstance, nerSystem)
+        } catch {
+          case e : Exception => {
+            Logger.logss("failed file: "+input_file)
+            System.err.print(e.toString)
+            e.printStackTrace(System.err)
+            null
+          }
+        }
       }
     }).foreach(Await.result(_, duration.Duration.Inf))
   }
@@ -98,7 +107,7 @@ object WikiPreprocessor {
         ret(c.start) = ret(c.start) :+ ("(" + c.label + ")")
       } else {
         ret(c.start) = ret(c.start) :+ ("(" + c.label)
-        ret(c.end) = ret(c.end) :+ (c.label + ")")
+        ret(c.end - 1) = ret(c.end - 1) :+ (c.label + ")")
       }
     })
     ret.map(i => {if(i.isEmpty) "-" else i.reduce(_+"|"+_)})
@@ -265,8 +274,17 @@ object WikiPreprocessor {
         m
     })
 
-    val parses : Array[Tree[String]] = tokens.map(t => Reprocessor.convertToFutileTree(
-      PreprocessingDriver.parse(parser, backoffParser, t.toList.asJava)))
+    val parses: Array[Tree[String]] = tokens.map(t => {
+      //try {
+        Reprocessor.convertToFutileTree(
+          PreprocessingDriver.parse(parser, backoffParser, t.toList.asJava))
+      /*} catch {
+        case e : java.lang.NullPointerException => {
+          null;
+        }
+      }*/
+    })
+
     // ... filter out the ones where the parses don't match, idk how that is going to effect
     val tps = (tokens, parses, 0 until tokens.size).zipped
       .filter((a,b,c) => a.length == b.getYield.size)

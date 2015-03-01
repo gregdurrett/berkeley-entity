@@ -4,7 +4,7 @@ TARGET = target/scala-2.11/berkeley-entity-assembly-1.jar
 
 all: $(TARGET)
 
-$(TARGET): $(wildcard src/**)
+$(TARGET): $(wildcard src/**/*)
 	sbt assembly
 
 aceTester: $(TARGET)
