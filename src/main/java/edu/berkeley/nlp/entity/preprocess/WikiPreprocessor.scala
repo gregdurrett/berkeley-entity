@@ -9,6 +9,7 @@ import edu.berkeley.nlp.entity.ner.NerSystemLabeled
 import edu.berkeley.nlp.futile.util.Logger
 import edu.berkeley.nlp.futile.syntax.Tree
 import edu.berkeley.nlp.futile.fig.basic.Indexer
+import edu.berkeley.nlp.futile.fig.basic.IOUtils
 
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.xml._
@@ -46,35 +47,102 @@ object WikiPreprocessor {
               backoffParser : CoarseToFineMaxRuleParser,
               nerSystem : NerSystemLabeled) = {
     val wdoc = mkWikiDoc(inputFile, docReader, splitter, parser, backoffParser, nerSystem)
-
+    val lines = wikiToConllLines(wdoc)
+    val wlines = wikiToWikiLines(wdoc)
+    //PreprocessingDriver.writeConllLines(wdoc.docID, lines.map(_.toArray).toArray, outputFile)
+    writeWikiLines(wdoc.docID, lines, outputFile)
+    writeWikiLines(wdoc.docID, wlines, outputFile.replace("raw", "wiki"))
   }
 
-  def wikiToLines(wdoc : WikiDoc) : Seq[Seq[String]] = {
-    val ret = ListBuffer[Array[String]]()
-    for(i <- 0 until wdoc.words.size) {
-    //  val rend = PreprocessingDriver.renderSentenceConllLines(wdoc.docID, 0, wdoc.words(i), )
-      //ret.append("test")
-    }
-    ret.toSeq.map(_.toSeq)
+  def writeWikiLines(docID : String, lines : Seq[Seq[String]], outputFile : String) = {
+    var writer = IOUtils.openOutHard(outputFile)
+    writer.println("#begin document (" + docID + "); part 000")
+    lines.foreach(l => {
+      l.foreach(writer.println(_))
+      writer.println
+    })
+    writer.close()
   }
 
-  def computeCorefBits[T](cr : Seq[Chunk[T]]) : Array[String] = {
-    var ret = new Array[String](cr.size)
-    for(i <- 0 until cr.size) {
-      var sb = new StringBuilder
-      for(c <- cr) {
-
-        if(c.start == i) {
-          sb.append("(")
-          sb.append(c.label)
-        }
-        if(c.end == i + 1)
-          sb.append(")")
-
+  def wikiToConllLines(wdoc : WikiDoc) : Seq[Seq[String]] = {
+    val ret = ListBuffer[Seq[String]]()
+    //ret.append("#begin document (" + wdoc.docID + "); part " + wdoc.docPartNo)
+    for(i <- 0 until wdoc.numSents) {
+      val parseBits = PreprocessingDriver.computeParseBits(Reprocessor.convertFromFutileTree(wdoc.trees(i).constTree))
+      //val nerBits = PreprocessingDriver.computeNerBits(wdoc.nerChunks(i).toArray)
+      val corefBits = computeBits(wdoc.corefChunks(i), wdoc.words(i).size)
+      var lines = new ListBuffer[String]()
+      // conll: [doc name] [part num] [word num] [word] [pos] [parsebit] [6] [7] [8] [speakers] [nerbit] [corefbit]
+      for(j <- 0 until wdoc.words(i).size) {
+        lines.append(wdoc.docID + "\t" +
+          wdoc.docPartNo + "\t" +
+          j + "\t" +
+          wdoc.words(i)(j) + "\t" +
+          wdoc.pos(i)(j) + "\t" +
+          parseBits(j) + "\t" +
+          "\t-\t-\t-\t" +
+          "-\t" + // speakers
+          "-\t" + // nerbit
+          corefBits(j) + "\t" // coref bits
+        )
       }
+      ret.append(lines.toSeq)
     }
-    ret
+    ret.toSeq
   }
+
+  def computeBits[T](items : Seq[Chunk[T]], len : Int) : Array[String] = {
+    var ret = Array.fill(len)(List[String]())
+    items.foreach(c => {
+      if(c.start == c.end -1) {
+        ret(c.start) = ret(c.start) :+ ("(" + c.label + ")")
+      } else {
+        ret(c.start) = ret(c.start) :+ ("(" + c.label)
+        ret(c.end) = ret(c.end) :+ (c.label + ")")
+      }
+    })
+    ret.map(i => {if(i.isEmpty) "-" else i.reduce(_+"|"+_)})
+  }
+
+  def wikiToWikiLines(wdoc : WikiDoc) : Seq[Seq[String]] = {
+    val ret = ListBuffer[Seq[String]]()
+    for(i <- 0 until wdoc.numSents) {
+      val lines = new ListBuffer[String]()
+      for(j <- 0 until wdoc.words(i).size) {
+        var s = ""
+        wdoc.wikiRefChunks(i).foreach(c => {
+          if(c.start == j)
+            s = "(" + c.label
+        })
+        s += "*"
+        wdoc.wikiRefChunks(i).foreach(c => {
+          if(c.end == j + 1)
+            s += ")"
+        })
+        lines.append(s)
+      }
+      ret.append(lines.toSeq)
+    }
+    ret.toSeq
+  }
+
+//  def computeCorefBits[T](cr : Seq[Chunk[T]]) : Array[String] = {
+//    var ret = new Array[String](cr.size)
+//    for(i <- 0 until cr.size) {
+//      var sb = new StringBuilder
+//      for(c <- cr) {
+//
+//        if(c.start == i) {
+//          sb.append("(")
+//          sb.append(c.label)
+//        }
+//        if(c.end == i + 1)
+//          sb.append(")")
+//
+//      }
+//    }
+//    ret
+//  }
 
   def mkWikiDoc(inputFile : String,
               docReader : WikiDocReader,
