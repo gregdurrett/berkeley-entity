@@ -12,3 +12,6 @@ aceTester: $(TARGET)
 
 queryModel: $(TARGET)
 	java -cp $(TARGET) edu.berkeley.nlp.entity.wiki.QueryChooser -wikiDBPath models/wiki-db-ace.ser.gz
+
+wikiLimited: $(TARGET)
+	java -cp $(TARGET) edu.berkeley.nlp.entity.preprocess.PreprocessingDriver ++config/base.conf -inputDir ../WikificationACL2011Data/WikipediaSample/RawTextsTrain/ -outputDir /tmp/gggg/raw/ -mode WIKILIMITED

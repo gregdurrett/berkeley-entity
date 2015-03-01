@@ -34,10 +34,10 @@ object WikiPreprocessor {
     new File(inputDir).listFiles.map(file => {
       val input_file = file.getAbsolutePath
       val output_file = outputDir + file.getName
-      //Future {
+      Future {
         process(input_file, output_file, docReader, splitter, parser, backoffParser, nerSystem)
-      //}
-    })//.foreach(Await.result(_, duration.Duration.Inf))
+      }
+    }).foreach(Await.result(_, duration.Duration.Inf))
   }
 
   def process(inputFile : String, outputFile : String,
