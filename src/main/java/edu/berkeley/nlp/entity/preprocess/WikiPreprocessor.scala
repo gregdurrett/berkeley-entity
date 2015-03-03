@@ -4,7 +4,7 @@ import java.io.File
 
 import edu.berkeley.nlp.PCFGLA.CoarseToFineMaxRuleParser
 import edu.berkeley.nlp.entity.lang.ModCollinsHeadFinder
-import edu.berkeley.nlp.entity.{DepConstTree, WikiDoc, Chunk, WikiDocReader}
+import edu.berkeley.nlp.entity._
 import edu.berkeley.nlp.entity.ner.NerSystemLabeled
 import edu.berkeley.nlp.futile.util.Logger
 import edu.berkeley.nlp.futile.syntax.Tree
@@ -31,7 +31,7 @@ object WikiPreprocessor {
                      parser : CoarseToFineMaxRuleParser,
                      backoffParser : CoarseToFineMaxRuleParser,
                      nerSystem : NerSystemLabeled) = {
-    new File(inputDir).listFiles.map(file => {
+    val wikiDocs = new File(inputDir).listFiles.map(file => {
       val input_file = file.getAbsolutePath
       val output_file = outputDir + file.getName
       Future {
@@ -46,7 +46,11 @@ object WikiPreprocessor {
           }
         }
       }
-    }).foreach(Await.result(_, duration.Duration.Inf))
+    }).map(f => {
+      Await.result(f, duration.Duration.Inf)
+      f.value.get.get
+    }).filter(_ != null).toList
+    GUtil.save(wikiDocs.asInstanceOf[Serializable], outputDir + "wiki-docs.doc.ser.gz")
   }
 
   def process(inputFile : String, outputFile : String,
@@ -54,13 +58,14 @@ object WikiPreprocessor {
               splitter : SentenceSplitter,
               parser : CoarseToFineMaxRuleParser,
               backoffParser : CoarseToFineMaxRuleParser,
-              nerSystem : NerSystemLabeled) = {
+              nerSystem : NerSystemLabeled) : WikiDoc = {
     val wdoc = mkWikiDoc(inputFile, docReader, splitter, parser, backoffParser, nerSystem)
     val lines = wikiToConllLines(wdoc)
     val wlines = wikiToWikiLines(wdoc)
     //PreprocessingDriver.writeConllLines(wdoc.docID, lines.map(_.toArray).toArray, outputFile)
     writeWikiLines(wdoc.docID, lines, outputFile)
     writeWikiLines(wdoc.docID, wlines, outputFile.replace("raw", "wiki"))
+    wdoc
   }
 
   def writeWikiLines(docID : String, lines : Seq[Seq[String]], outputFile : String) = {
