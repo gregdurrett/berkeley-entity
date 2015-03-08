@@ -4,7 +4,7 @@ import java.io.File
 
 import edu.berkeley.nlp.PCFGLA.CoarseToFineMaxRuleParser
 import edu.berkeley.nlp.entity.lang.ModCollinsHeadFinder
-import edu.berkeley.nlp.entity.{DepConstTree, WikiDoc, Chunk, WikiDocReader}
+import edu.berkeley.nlp.entity._
 import edu.berkeley.nlp.entity.ner.NerSystemLabeled
 import edu.berkeley.nlp.futile.util.Logger
 import edu.berkeley.nlp.futile.syntax.Tree
@@ -31,22 +31,21 @@ object WikiPreprocessor {
                      parser : CoarseToFineMaxRuleParser,
                      backoffParser : CoarseToFineMaxRuleParser,
                      nerSystem : NerSystemLabeled) = {
-    new File(inputDir).listFiles.map(file => {
+    val wikiDocs = new File(inputDir).listFiles/*.par*/.map(file => {
       val input_file = file.getAbsolutePath
       val output_file = outputDir + file.getName
-      Future {
-        try {
-          process(input_file, output_file, docReader, splitter, parser.newInstance, backoffParser.newInstance, nerSystem)
-        } catch {
-          case e : Exception => {
-            Logger.logss("failed file: "+input_file)
-            System.err.print(e.toString)
-            e.printStackTrace(System.err)
-            null
-          }
+      try {
+        process(input_file, output_file, docReader, splitter, parser.newInstance, backoffParser.newInstance, nerSystem)
+      } catch {
+        case e : Exception => {
+          Logger.logss("failed file: "+input_file)
+          System.err.print(e.toString)
+          e.printStackTrace(System.err)
+          null
         }
       }
-    }).foreach(Await.result(_, duration.Duration.Inf))
+    }).filter(_ != null).toList
+    GUtil.save(wikiDocs.asInstanceOf[Serializable], outputDir + "wiki-docs.doc.ser.gz")
   }
 
   def process(inputFile : String, outputFile : String,
@@ -54,13 +53,15 @@ object WikiPreprocessor {
               splitter : SentenceSplitter,
               parser : CoarseToFineMaxRuleParser,
               backoffParser : CoarseToFineMaxRuleParser,
-              nerSystem : NerSystemLabeled) = {
+              nerSystem : NerSystemLabeled) : WikiDoc = {
     val wdoc = mkWikiDoc(inputFile, docReader, splitter, parser, backoffParser, nerSystem)
     val lines = wikiToConllLines(wdoc)
+    //val wlines = wiki.WikiAnnotReaderWriter.getWikiBits(wdoc.words.map(_.size), wdoc.wikiRefChunks)
     val wlines = wikiToWikiLines(wdoc)
     //PreprocessingDriver.writeConllLines(wdoc.docID, lines.map(_.toArray).toArray, outputFile)
     writeWikiLines(wdoc.docID, lines, outputFile)
     writeWikiLines(wdoc.docID, wlines, outputFile.replace("raw", "wiki"))
+    wdoc
   }
 
   def writeWikiLines(docID : String, lines : Seq[Seq[String]], outputFile : String) = {
@@ -113,7 +114,8 @@ object WikiPreprocessor {
     ret.map(i => {if(i.isEmpty) "-" else i.reduce(_+"|"+_)})
   }
 
-  def wikiToWikiLines(wdoc : WikiDoc) : Seq[Seq[String]] = {
+  /*def wikiToWikiLines(wdoc : WikiDoc) : Seq[Seq[String]] = {
+    // this does not handle multiple chunks on the same span well, but that shouldn't be an issue, since wiki docs shouldn't have that
     val ret = ListBuffer[Seq[String]]()
     for(i <- 0 until wdoc.numSents) {
       val lines = new ListBuffer[String]()
@@ -133,6 +135,21 @@ object WikiPreprocessor {
       ret.append(lines.toSeq)
     }
     ret.toSeq
+  }*/
+
+  def wikiToWikiLines(wdoc : WikiDoc) : Seq[Seq[String]] = {
+    for (sentIdx <- 0 until wdoc.words.size) yield {
+      for (tokenIdx <- 0 until wdoc.words(sentIdx).size) yield {
+        val chunksStartingHere = wdoc.wikiRefChunks(sentIdx).filter(chunk => chunk.start == tokenIdx).sortBy(- _.end);
+        val numChunksEndingHere = wdoc.wikiRefChunks(sentIdx).filter(chunk => chunk.end - 1 == tokenIdx).size;
+        var str = if(chunksStartingHere.isEmpty) "" else {
+          chunksStartingHere.map("("+_.label.replace("(", "-LRB-").replace(")", "-RRB-").replace("*", "-STAR-")).reduce(_+"|"+_)
+        }
+        str += "*";
+        str += ")" * numChunksEndingHere
+        str;
+      }
+    }
   }
 
 
@@ -169,6 +186,10 @@ object WikiPreprocessor {
       val d = doclenratio * (ref._2 + ref._3 / 2.0)
       var cnt = 0
       val wrds = ref._1.replace(" ", "")
+
+      if(wrds.isEmpty) // wtf, how does not create an empty citation???
+        return (-1, null)
+
       def rank_match(i : Int, j : Int) : Double = {
         val res = tokens(i).drop(j).reduce(_+_)
         for(q <- 0 until Math.min(wrds.size, res.size)) {
@@ -177,33 +198,31 @@ object WikiPreprocessor {
         }
         1.0
       }
-      for(i <- 0 to sentences.size) {
-        cnt += sentences(i).size
-        if(cnt > d) {
-          // assume that the reference is in this sentence
-          var ll = cnt - sentences(i).size + d // estimated place in sentence
-          var tcnt = 0
-          var best_start = 0
-          var best_rank = Double.NegativeInfinity
-
-          for(j <- 0 until tokens(i).size) {
-            val r = rank_match(i,j) / Math.abs(ll - tcnt) // try and make the item close to where it should be
-            if(r > best_rank) {
-              best_start = j
-              best_rank = r
-            }
-            tcnt += tokens(i)(j).size
+      var best_start = 0
+      var best_rank = Double.NegativeInfinity
+      var best_sentence = 0
+      for(i <- 0 until sentences.size) {
+        var tcnt = 0
+        for(j <- 0 until tokens(i).size) {
+          val r = rank_match(i, j) / Math.log(Math.abs(d - cnt - tcnt) + 2) // little to simple, but works in most cases
+          if(r > best_rank) {
+            best_rank = r
+            best_start = j
+            best_sentence = i
           }
-          var len = 0
-          var len_cnt = 0
-          for(j <- best_start until tokens(i).size; if len_cnt < wrds.size) {
-            len_cnt += tokens(i)(j).size
-            len += 1
-          }
-          return (i, new Chunk(best_start, best_start + len, ref._4))
+          tcnt += tokens(i)(j).size + 1 // +1 to match the space
         }
+        cnt += sentences(i).size
       }
-      (-1, null)
+      var len = 0
+      var len_cnt = 0
+      for(j <- best_start until tokens(best_sentence).size; if len_cnt < wrds.size) {
+        len_cnt += tokens(best_sentence)(j).size
+        len += 1
+      }
+      if(len == 0)
+        return (-1, null)
+      (best_sentence, new Chunk(best_start, best_start + len, ref._4))
     }
 
     val refplaces = references.map(refFinder)

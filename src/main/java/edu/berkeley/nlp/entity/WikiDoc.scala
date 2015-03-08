@@ -3,6 +3,7 @@ package edu.berkeley.nlp.entity
 /**
  * Created by matthew on 2/18/15.
  */
+@SerialVersionUID(1L)
 case class WikiDoc (docID : String,
                     docPartNo : Int,
                     words : Seq[Seq[String]],

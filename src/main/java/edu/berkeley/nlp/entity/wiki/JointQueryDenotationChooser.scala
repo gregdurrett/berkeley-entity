@@ -3,16 +3,14 @@ package edu.berkeley.nlp.entity.wiki
 import edu.berkeley.nlp.entity.lang.Language
 import edu.berkeley.nlp.futile.LightRunner
 import edu.berkeley.nlp.entity.coref.CorefDocAssembler
-import edu.berkeley.nlp.entity.ConllDocReader
+import edu.berkeley.nlp.entity._
 import edu.berkeley.nlp.entity.coref.MentionPropertyComputer
-import edu.berkeley.nlp.entity.GUtil
 import edu.berkeley.nlp.futile.fig.basic.Indexer
 import edu.berkeley.nlp.entity.joint.LikelihoodAndGradientComputer
 import scala.collection.mutable.ArrayBuffer
 import edu.berkeley.nlp.entity.coref.CorefDoc
 import edu.berkeley.nlp.futile.math.SloppyMath
 import edu.berkeley.nlp.futile.util.Logger
-import edu.berkeley.nlp.entity.Chunk
 import edu.berkeley.nlp.entity.joint.GeneralTrainer
 
 /**
@@ -185,7 +183,7 @@ object JointQueryDenotationChooser {
   
   val trainDataPath = "data/ace05/train";
   val testDataPath = "data/ace05/dev";
-  val wikiPath = "data/ace05/ace05-all-conll-wiki"
+  val wikiPath = "data/ace05/ace05-all-conll-wiki" // contains the wiki links for both items
   val wikiDBPath = "models/wiki-db-ace.ser.gz"
   
   val lambda = 1e-8F
@@ -199,8 +197,22 @@ object JointQueryDenotationChooser {
     LightRunner.populateScala(JointQueryDenotationChooser.getClass(), args)
     // Read in CoNLL documents 
     val assembler = CorefDocAssembler(Language.ENGLISH, true);
-    val trainDocs = ConllDocReader.loadRawConllDocsWithSuffix(trainDataPath, -1, "", Language.ENGLISH);
-    val trainCorefDocs = trainDocs.map(doc => assembler.createCorefDoc(doc, new MentionPropertyComputer(None)));
+    val trainDocs = if(trainDataPath.startsWith("wikiser:")) {
+      WikiDocReader.loadRawWikiDocs(trainDataPath.split(":")(1), -1, "", Language.ENGLISH)
+    } else {
+      ConllDocReader.loadRawConllDocsWithSuffix(trainDataPath, -1, "", Language.ENGLISH)
+    };
+    val trainCorefDocs = trainDocs.map(doc => {
+      try {
+        assembler.createCorefDoc(doc, new MentionPropertyComputer(None))
+      } catch {
+        case e : Exception => {
+          // TODO: fix the wikidocument parser
+          println("failed document "+doc.docID)
+          null
+        }
+      }
+    }).filter(_!=null);
     
     // Read in gold Wikification labels
     val goldWikification = WikiAnnotReaderWriter.readStandoffAnnotsAsCorpusAnnots(wikiPath)

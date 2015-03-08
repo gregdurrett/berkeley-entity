@@ -210,22 +210,41 @@ object WikipediaInterface {
     val mentionPropertyComputer = new MentionPropertyComputer(None);
     val pmAssembler = CorefDocAssembler(Language.ENGLISH, useGoldMentions = false);
     val gmAssembler = CorefDocAssembler(Language.ENGLISH, useGoldMentions = true);
-    val corefDocs = WikipediaInterface.datasetPaths.split(",").flatMap(path => {
-      if (WikipediaInterface.mentionType == "old") {
+    val corefDocs = WikipediaInterface.datasetPaths.split(",").flatMap(path_ => {
+      var path = path_
+      val mentionType = if(path.contains(":")) {
+        val s = path.split(":")
+        path = s(1)
+        s(0)
+      } else {
+        WikipediaInterface.mentionType
+      }
+      Logger.logss("Loading documents "+mentionType+" "+path)
+      if (mentionType == "old") {
         // Wikification dataset: use only auto_conll and pred mentions
         ConllDocReader.loadRawConllDocsWithSuffix(path, -1, "", Language.ENGLISH).map(doc => pmAssembler.createCorefDoc(doc, mentionPropertyComputer));
-      } else if (WikipediaInterface.mentionType == "ace") {
+      } else if (mentionType == "ace") {
         // ACE: Use gold mentions here
         ConllDocReader.loadRawConllDocsWithSuffix(path, -1, "", Language.ENGLISH).map(doc => gmAssembler.createCorefDoc(doc, mentionPropertyComputer));
-      } else if (WikipediaInterface.mentionType == "ontonotes") {
+      } else if (mentionType == "ontonotes") {
         // OntoNotes: use only auto_conll and pred mentions
         ConllDocReader.loadRawConllDocsWithSuffix(path, -1, docSuffix, Language.ENGLISH).map(doc => pmAssembler.createCorefDoc(doc, mentionPropertyComputer));
-      } else if (WikipediaInterface.mentionType == "wikipedia") {
-        WikiDocReader.loadRawWikiDocs(path, -1, docSuffix, Language.ENGLISH).map(doc => pmAssembler.createCorefDoc(doc, mentionPropertyComputer))
+      } else if (mentionType == "wikiser") {
+        WikiDocReader.loadRawWikiDocs(path, -1, docSuffix, Language.ENGLISH).map(doc => {
+          try {
+            gmAssembler.createCorefDoc(doc, mentionPropertyComputer)
+          } catch {
+            case e : Exception => {
+              // there are currently about 30 documents that are having an issue with their references
+              println("FAIL DOCUMENT: "+doc.docID)
+              null
+            }
+          }
+        })
       } else {
         throw new RuntimeException("Unrecognized mention type: " + WikipediaInterface.mentionType);
       }
-    });
+    }).filter(_!=null);
 //    val queries = corefDocs.flatMap(_.predMentions.filter(!_.mentionType.isClosedClass)).flatMap(ment => WikipediaTitleGivenSurfaceDB.extractQueries(ment, ment.headIdx)).toSet;
 
     // MFL TODO: this is the queries that will have to be rewritten to support the wiki documents.
