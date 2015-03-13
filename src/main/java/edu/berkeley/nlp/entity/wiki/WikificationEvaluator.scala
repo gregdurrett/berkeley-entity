@@ -1,12 +1,13 @@
 package edu.berkeley.nlp.entity.wiki
 
-import edu.berkeley.nlp.entity.Chunk
+import edu.berkeley.nlp.entity.{Document, Chunk, GUtil}
 import edu.berkeley.nlp.futile.util.Logger
-import edu.berkeley.nlp.entity.GUtil
 import edu.berkeley.nlp.futile.util.Counter
 import scala.collection.JavaConverters._
 import edu.berkeley.nlp.entity.joint.JointDocACE
 import java.io.PrintWriter
+
+import scala.collection.mutable.ArrayBuffer
 
 object WikificationEvaluator {
   
@@ -82,28 +83,27 @@ object WikificationEvaluator {
 
   // create sets of all the gold document references, and all the documents
   // that we generate, and then compute an F1
-
-  /*def evaluateBOTF1_mfl(results : Seq[(String, Seq[String])]) = {
-    var correct = 0;
-    var precDenom = 0;
-    var recDenom = 0;
-    for (i <- 0 until results.size) {
-
-      for (title <- allPredTitles(i)) {
-        var markedCorrect = false;
-        for (goldTitleSet <- allGoldTitles(i)) {
-          markedCorrect = markedCorrect || isCorrect(goldTitleSet.toSeq, title);
-        }
-        if (markedCorrect) {
-          correct += 1;
+  def evaluateBOTF1_mfl(results : Map[Document, Seq[(Seq[String], Seq[String], Document)]]) = {
+    // f1 = 2 * precision * recall / (percison + recall)
+    var correct = 0
+    var precDenom = 0
+    var recDenom = 0
+    for((doc, matches) <- results) {
+      var seenBefore = Set[String]()
+      for((gold, selected, _) <- matches) {
+        val goldS = Set(gold:_*)
+        val selectedS = Set(selected(0)) //Set(selected:_*)
+        val ints = goldS & selectedS
+        if(!ints.subsetOf(seenBefore)) {
+          correct += ints.size
+          seenBefore ++= ints
         }
       }
-      precDenom += allPredTitles(i).size;
-      recDenom += allGoldTitles(i).size;
+      precDenom += Set(matches.flatMap(_._2):_*).size
+      recDenom += Set(matches.flatMap(_._1):_*).size
     }
-    Logger.logss("Results (BOT F1): " + GUtil.renderPRF1(correct, precDenom, recDenom));
-  }*/
-
+    Logger.logss("Results (BOT F1): " + GUtil.renderPRF1(correct, precDenom, recDenom))
+  }
 
   
   def convertChunksToBagOfTitles(titles: Iterable[Seq[Chunk[String]]]): Set[String] = {

@@ -149,7 +149,7 @@ class JointQueryDenotationChooser(val featureIndexer: Indexer[String],
     val ex = new JointQueryDenotationExample(queries, denotations, Array[String](), Array[String]());
     val denotationMarginals = computer.getDenotationLogMarginals(ex, weights)
 
-    ex.allDenotations.zipWithIndex.sortBy(v => denotationMarginals(v._2)).map(_._1)
+    ex.allDenotations.zipWithIndex.sortBy(v => denotationMarginals(v._2)).reverse.map(_._1)
   }
 }
 
@@ -266,8 +266,8 @@ object JointQueryDenotationChooser {
     val testExs = extractExamples(testCorefDocs, goldWikification, wikiDB, filterImpossible = false);
 
     val results = testExs.map(t => {
-      // TOD: need more then one perdicted title
-      (t.rawCorrectDenotations, chooser.pickDenotations(t.queries, wikiDB))
+      // TODO: need more then one perdicted title
+      (t.rawCorrectDenotations, chooser.pickDenotations(t.queries, wikiDB), t.queries(0).originalMent.rawDoc)
     })
 
     val goldTestDenotationsAsTrivialChunks = (0 until results.size).map(i => new Chunk[Seq[String]](i, i+1, results(i)._1))
@@ -276,11 +276,10 @@ object JointQueryDenotationChooser {
     // Hacky but lets us reuse some code that normally evaluates things with variable endpoints
 //    WikificationEvaluator.evaluateWikiChunksBySent(Seq(goldTestDenotationsAsTrivialChunks), Seq(predTestDenotationsAsTrivialChunks))
     WikificationEvaluator.evaluateFahrniMetrics(Seq(goldTestDenotationsAsTrivialChunks), Seq(predTestDenotationsAsTrivialChunks), Set())
-    //val outs = new PrintWRiter(System.out)
-    //WikificationEvaluator.writeWikificationRightAndWrong(outs, outs, )
 
+    val mentionsByDoc = results.groupBy(_._3)
 
-
+    WikificationEvaluator.evaluateBOTF1_mfl(mentionsByDoc)
 
 
     LightRunner.finalizeOutput();
