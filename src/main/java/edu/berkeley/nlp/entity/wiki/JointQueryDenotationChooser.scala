@@ -53,13 +53,17 @@ class JointQueryDenotationChoiceComputer(val wikiDB: WikipediaInterface,
    */
   def getUnnormalizedJointScores(ex: JointQueryDenotationExample, weights: Array[Float]): Array[Array[Float]] = {
     featurizeUseCache(ex, false)
+    // each example will have a number of features associated with each query
+    // each feature is an indicator, so we use the cache of the features indexes
+    // and sum the values of the features
     val rawQueryScores = ex.cachedFeatsEachQuery.map(feats => GUtil.scoreIndexedFeats(feats, weights));
+    // these are the weights from each query wrt the various word choices
     val queryDenotationMatrix = ex.cachedFeatsEachQueryDenotation.map(_.map(feats => GUtil.scoreIndexedFeats(feats, weights)));
     val scores = Array.tabulate(ex.queries.size, ex.allDenotations.size)((i, j) => Float.NegativeInfinity)
-    for (queryIdx <- 0 until ex.queries.size) {
-      for (denotationIdx <- 0 until ex.allDenotations.size) {
-        scores(queryIdx)(denotationIdx) = rawQueryScores(queryIdx) + queryDenotationMatrix(queryIdx)(denotationIdx)
-      }
+    for (queryIdx <- 0 until ex.queries.size; denotationIdx <- 0 until ex.allDenotations.size) {
+      // These are indicator weights, so by summing them we can compute the resulting value of choosing a given word
+      // and a given query by combining the results of the dot product of the query and the denotation
+      scores(queryIdx)(denotationIdx) = rawQueryScores(queryIdx) + queryDenotationMatrix(queryIdx)(denotationIdx)
     }
     scores
   }
@@ -70,7 +74,9 @@ class JointQueryDenotationChoiceComputer(val wikiDB: WikipediaInterface,
    */
   def getDenotationLogMarginals(ex: JointQueryDenotationExample, weights: Array[Float]): Array[Float] = {
     val scores = getUnnormalizedJointScores(ex, weights)
-    // Sum up each column
+    // the scores matrix contains log(p_{i,j}), so we are using
+    // logAdd to sum the probabilities
+    // as p(q,d) \propto e^(w^T f(q,d))
     val rawDenotationMarginals = Array.tabulate(ex.allDenotations.size)(i => SloppyMath.logAdd(scores.map(_(i))).toFloat)
     val normalizer = SloppyMath.logAdd(rawDenotationMarginals).toFloat
     (0 until rawDenotationMarginals.size).foreach(i => rawDenotationMarginals(i) -= normalizer)
@@ -136,6 +142,15 @@ class JointQueryDenotationChooser(val featureIndexer: Indexer[String],
     val ex = new JointQueryDenotationExample(queries, denotations, Array[String](), Array[String]());
     computer.computeDenotation(ex, weights)
   }
+
+  def pickDenotations(queries: Seq[Query], wikiDB: WikipediaInterface) : Seq[String] = {
+    val computer = new JointQueryDenotationChoiceComputer(wikiDB, featureIndexer);
+    val denotations = queries.map(query => wikiDB.disambiguateBestNoDisambig(query));
+    val ex = new JointQueryDenotationExample(queries, denotations, Array[String](), Array[String]());
+    val denotationMarginals = computer.getDenotationLogMarginals(ex, weights)
+
+    ex.allDenotations.zipWithIndex.sortBy(v => denotationMarginals(v._2)).map(_._1)
+  }
 }
 
 object JointQueryDenotationChooser {
@@ -180,6 +195,16 @@ object JointQueryDenotationChooser {
     exs;
   }
 
+
+  def loadDocuments(path : String) = {
+    val limit = 500 // -1
+    if(path.startsWith("wikiser:")) {
+      WikiDocReader.loadRawWikiDocs(path.split(":")(1), limit, "", Language.ENGLISH)
+    } else {
+      ConllDocReader.loadRawConllDocsWithSuffix(path, limit, "", Language.ENGLISH)
+    }
+  }
+
   
   val trainDataPath = "data/ace05/train";
   val testDataPath = "data/ace05/dev";
@@ -197,11 +222,7 @@ object JointQueryDenotationChooser {
     LightRunner.populateScala(JointQueryDenotationChooser.getClass(), args)
     // Read in CoNLL documents 
     val assembler = CorefDocAssembler(Language.ENGLISH, true);
-    val trainDocs = if(trainDataPath.startsWith("wikiser:")) {
-      WikiDocReader.loadRawWikiDocs(trainDataPath.split(":")(1), -1, "", Language.ENGLISH)
-    } else {
-      ConllDocReader.loadRawConllDocsWithSuffix(trainDataPath, -1, "", Language.ENGLISH)
-    };
+    val trainDocs = loadDocuments(trainDataPath);
     val trainCorefDocs = trainDocs.map(doc => {
       try {
         assembler.createCorefDoc(doc, new MentionPropertyComputer(None))
@@ -213,7 +234,11 @@ object JointQueryDenotationChooser {
         }
       }
     }).filter(_!=null);
-    
+
+    //val testDocs = ConllDocReader.loadRawConllDocsWithSuffix(testDataPath, -1, "", Language.ENGLISH);
+    val testDocs = loadDocuments(testDataPath)
+    val testCorefDocs = testDocs.map(doc => assembler.createCorefDoc(doc, new MentionPropertyComputer(None)));
+
     // Read in gold Wikification labels
     val goldWikification = WikiAnnotReaderWriter.readStandoffAnnotsAsCorpusAnnots(wikiPath)
     // Read in the title given surface database
@@ -237,16 +262,27 @@ object JointQueryDenotationChooser {
     
     // Build the test examples and decode the test set
     // No filtering now because we're doing test
-    val testDocs = ConllDocReader.loadRawConllDocsWithSuffix(testDataPath, -1, "", Language.ENGLISH);
-    val testCorefDocs = testDocs.map(doc => assembler.createCorefDoc(doc, new MentionPropertyComputer(None)));
+
     val testExs = extractExamples(testCorefDocs, goldWikification, wikiDB, filterImpossible = false);
-    val goldTestDenotationsAsTrivialChunks = (0 until testExs.size).map(i => new Chunk[Seq[String]](i, i+1, testExs(i).rawCorrectDenotations))
-    val predTestDenotationsAsTrivialChunks = (0 until testExs.size).map(i => new Chunk[String](i, i+1, chooser.pickDenotation(testExs(i).queries, wikiDB)))
+
+    val results = testExs.map(t => {
+      // TOD: need more then one perdicted title
+      (t.rawCorrectDenotations, chooser.pickDenotations(t.queries, wikiDB))
+    })
+
+    val goldTestDenotationsAsTrivialChunks = (0 until results.size).map(i => new Chunk[Seq[String]](i, i+1, results(i)._1))
+    val predTestDenotationsAsTrivialChunks = (0 until results.size).map(i => new Chunk[String](i, i+1, results(i)._2(0)))
     
     // Hacky but lets us reuse some code that normally evaluates things with variable endpoints
 //    WikificationEvaluator.evaluateWikiChunksBySent(Seq(goldTestDenotationsAsTrivialChunks), Seq(predTestDenotationsAsTrivialChunks))
     WikificationEvaluator.evaluateFahrniMetrics(Seq(goldTestDenotationsAsTrivialChunks), Seq(predTestDenotationsAsTrivialChunks), Set())
-    
+    //val outs = new PrintWRiter(System.out)
+    //WikificationEvaluator.writeWikificationRightAndWrong(outs, outs, )
+
+
+
+
+
     LightRunner.finalizeOutput();
   }
   

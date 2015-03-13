@@ -31,7 +31,7 @@ object WikiPreprocessor {
                      parser : CoarseToFineMaxRuleParser,
                      backoffParser : CoarseToFineMaxRuleParser,
                      nerSystem : NerSystemLabeled) = {
-    val wikiDocs = new File(inputDir).listFiles/*.par*/.map(file => {
+    val wikiDocs = new File(inputDir).listFiles.par.map(file => {
       val input_file = file.getAbsolutePath
       val output_file = outputDir + file.getName
       try {

@@ -78,6 +78,33 @@ object WikificationEvaluator {
     }
     Logger.logss("Results (BOT F1): " + GUtil.renderPRF1(correct, precDenom, recDenom));
   }
+
+
+  // create sets of all the gold document references, and all the documents
+  // that we generate, and then compute an F1
+
+  /*def evaluateBOTF1_mfl(results : Seq[(String, Seq[String])]) = {
+    var correct = 0;
+    var precDenom = 0;
+    var recDenom = 0;
+    for (i <- 0 until results.size) {
+
+      for (title <- allPredTitles(i)) {
+        var markedCorrect = false;
+        for (goldTitleSet <- allGoldTitles(i)) {
+          markedCorrect = markedCorrect || isCorrect(goldTitleSet.toSeq, title);
+        }
+        if (markedCorrect) {
+          correct += 1;
+        }
+      }
+      precDenom += allPredTitles(i).size;
+      recDenom += allGoldTitles(i).size;
+    }
+    Logger.logss("Results (BOT F1): " + GUtil.renderPRF1(correct, precDenom, recDenom));
+  }*/
+
+
   
   def convertChunksToBagOfTitles(titles: Iterable[Seq[Chunk[String]]]): Set[String] = {
     val bagOfTitles = titles.flatMap(sentTitles => {
