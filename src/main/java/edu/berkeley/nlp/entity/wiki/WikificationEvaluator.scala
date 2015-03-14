@@ -90,17 +90,33 @@ object WikificationEvaluator {
     var recDenom = 0
     for((doc, matches) <- results) {
       var seenBefore = Set[String]()
-      for((gold, selected, _) <- matches) {
+      val allGold = Set(matches.flatMap(_._1):_*)
+      val allChoosen = Set(matches.map(_._2(0)):_*) //Set(matches.flatMap(_._2):_*)
+
+      /*for((gold, selected, _) <- matches) {
         val goldS = Set(gold:_*)
         val selectedS = Set(selected(0)) //Set(selected:_*)
         val ints = goldS & selectedS
-        if(!ints.subsetOf(seenBefore)) {
+        //if(!ints.subsetOf(seenBefore)) {
           correct += ints.size
           seenBefore ++= ints
-        }
-      }
-      precDenom += Set(matches.flatMap(_._2):_*).size
-      recDenom += Set(matches.flatMap(_._1):_*).size
+        //}
+      }*/
+      // TODO: something wrong with computing the set intersection
+
+      val dprecDenom = allChoosen.size
+      val drecDenom = allGold.size
+      var dcorrect = 0
+      allChoosen.foreach(c => {
+        if(isCorrect(allGold.toSeq, c))
+          dcorrect += 1
+      })
+      //val diff = (allGold ++ allChoosen) -- (allGold & allChoosen)
+      //val dcorrect = (allGold & allChoosen).size
+      //Logger.logss("Document f1: "+GUtil.renderPRF1(dcorrect, dprecDenom, drecDenom))
+      precDenom += dprecDenom
+      recDenom += drecDenom
+      correct += dcorrect
     }
     Logger.logss("Results (BOT F1): " + GUtil.renderPRF1(correct, precDenom, recDenom))
   }
