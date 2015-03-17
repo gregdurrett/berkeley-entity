@@ -40,7 +40,7 @@ class JointQueryDenotationChoiceComputer(val wikiDB: WikipediaInterface,
                                          val featureIndexer: Indexer[String]) extends LikelihoodAndGradientComputer[JointQueryDenotationExample] {
   // Used for feature computation
   val queryChooser = new QueryChoiceComputer(wikiDB, featureIndexer)
-  
+
   def featurizeUseCache(ex: JointQueryDenotationExample, addToIndexer: Boolean) {
     if (ex.cachedFeatsEachQuery == null) {
       ex.cachedFeatsEachQuery = queryChooser.featurizeQueries(ex.queries, addToIndexer)
@@ -136,20 +136,25 @@ class JointQueryDenotationChoiceComputer(val wikiDB: WikipediaInterface,
 class JointQueryDenotationChooser(val featureIndexer: Indexer[String],
                                   val weights: Array[Float]) extends Serializable {
   
-  def pickDenotation(queries: Seq[Query], wikiDB: WikipediaInterface): String = {
+  /*def pickDenotation(queries: Seq[Query], wikiDB: WikipediaInterface): String = {
     val computer = new JointQueryDenotationChoiceComputer(wikiDB, featureIndexer);
-    val denotations = queries.map(query => wikiDB.disambiguateBestNoDisambig(query));
+    val denotations = queries.map(query => wikiDB.disambiguateBestGetAllOptions(query));
     val ex = new JointQueryDenotationExample(queries, denotations, Array[String](), Array[String]());
     computer.computeDenotation(ex, weights)
-  }
+  }*/
 
   def pickDenotations(queries: Seq[Query], wikiDB: WikipediaInterface) : Seq[String] = {
     val computer = new JointQueryDenotationChoiceComputer(wikiDB, featureIndexer);
-    val denotations = queries.map(query => wikiDB.disambiguateBestNoDisambig(query));
-    val ex = new JointQueryDenotationExample(queries, denotations, Array[String](), Array[String]());
+    val denotations = queries.map(query => wikiDB.disambiguateBestGetAllOptions(query));
+    val dden = Query.extractDenotationSetWithNil(queries, denotations, 10)
+    val ex = new JointQueryDenotationExample(queries, dden, Array[String](), Array[String]());
     val denotationMarginals = computer.getDenotationLogMarginals(ex, weights)
 
     ex.allDenotations.zipWithIndex.sortBy(v => denotationMarginals(v._2)).reverse.map(_._1)
+  }
+
+  def diffFeatures(correct: Query, choosen: Query, wikiDB: WikipediaInterface) = {
+
   }
 }
 
@@ -197,7 +202,7 @@ object JointQueryDenotationChooser {
 
 
   def loadDocuments(path : String) = {
-    val limit = 500 // -1
+    val limit = numLoadedSamples//500
     if(path.startsWith("wikiser:")) {
       WikiDocReader.loadRawWikiDocs(path.split(":")(1), limit, "", Language.ENGLISH)
     } else {
@@ -216,6 +221,8 @@ object JointQueryDenotationChooser {
   val numItrs = 20
   
   val maxNumWikificationOptions = 7
+
+  val numLoadedSamples = -1 // for debugging by loading less samples
   
   def main(args: Array[String]) {
     LightRunner.initializeOutput(JointQueryDenotationChooser.getClass());
@@ -263,11 +270,37 @@ object JointQueryDenotationChooser {
     // Build the test examples and decode the test set
     // No filtering now because we're doing test
 
-    val testExs = extractExamples(testCorefDocs, goldWikification, wikiDB, filterImpossible = false);
+    val testExs = extractExamples(testCorefDocs, goldWikification, wikiDB, filterImpossible = true)//false);
+
+    var correctItemWasInSet = 0
 
     val results = testExs.map(t => {
       // TODO: need more then one perdicted title
-      (t.rawCorrectDenotations, chooser.pickDenotations(t.queries, wikiDB), t.queries(0).originalMent.rawDoc)
+      val picks = chooser.pickDenotations(t.queries, wikiDB)
+      if(!isCorrect(t.rawCorrectDenotations, picks(0))) {
+        // the pick is not correct, attempt to determine if there would have
+        // been a better pick that is in the picks list (which basically means all of the
+        /*if(picks.size > 1 && isCorrect(t.rawCorrectDenotations, picks(1))) {
+          // the correct pick was the second answer instead of the first one
+          // try and report the differences between the two items
+          println("second pick was correct")
+
+        }*/
+        var qq = false
+        for((p, i) <- picks.drop(1).zipWithIndex) {
+          // try: t.correctDenotations here?
+          if(isCorrect(t.correctDenotations, p) || isCorrect(t.rawCorrectDenotations, p)) {
+            println("Found correct item with "+i)
+            correctItemWasInSet += 1
+            qq = true
+            //println("found correct item")
+          }
+        }
+        if(!qq) {
+          println("???")
+        }
+      }
+      (t.rawCorrectDenotations, picks, t.queries(0).originalMent.rawDoc)
     })
 
     val goldTestDenotationsAsTrivialChunks = (0 until results.size).map(i => new Chunk[Seq[String]](i, i+1, results(i)._1))
@@ -280,6 +313,7 @@ object JointQueryDenotationChooser {
     val mentionsByDoc = results.groupBy(_._3)
 
     WikificationEvaluator.evaluateBOTF1_mfl(mentionsByDoc)
+    println("Number of correct items that were in the set: "+correctItemWasInSet)
 
 
     LightRunner.finalizeOutput();
