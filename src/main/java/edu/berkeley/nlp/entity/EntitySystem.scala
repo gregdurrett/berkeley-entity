@@ -153,7 +153,7 @@ object EntitySystem {
        ConllDocReader.loadRawConllDocsWithSuffix(goldPath, size, goldSuffix));
     } else {
       (ConllDocReader.loadRawConllDocsWithSuffix(path, size, suffix),
-       new ArrayBuffer[ConllDoc]());
+       new ArrayBuffer[Document]());
     }
     val goldWikification = new HashMap[String,HashMap[Int,ArrayBuffer[Chunk[String]]]];
     val assembler = CorefDocAssembler(Driver.lang, Driver.useGoldMentions);

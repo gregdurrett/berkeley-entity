@@ -12,17 +12,17 @@ import edu.berkeley.nlp.entity.lang.ChineseCorefLanguagePack
 import edu.berkeley.nlp.entity.lang.ArabicCorefLanguagePack
 import edu.berkeley.nlp.futile.util.Counter
 import edu.berkeley.nlp.futile.syntax.Trees.PennTreeRenderer
-import edu.berkeley.nlp.entity.ConllDoc
+import edu.berkeley.nlp.entity.Document
 
 case class ProtoMention(val sentIdx: Int, val startIdx: Int, val endIdx: Int, val headIdx: Int);
 case class ProtoMentionFancy(val sentIdx: Int, val startIdx: Int, val endIdx: Int, val headIndices: Seq[Int]);
 
-case class ProtoCorefDoc(val doc: ConllDoc, val goldMentions: Seq[Mention], val predProtoMentions: Seq[ProtoMention]);
+case class ProtoCorefDoc(val doc: Document, val goldMentions: Seq[Mention], val predProtoMentions: Seq[ProtoMention]);
 
 class CorefDocAssembler(val langPack: CorefLanguagePack,
                         val useGoldMentions: Boolean) {
   
-  def createCorefDoc(rawDoc: ConllDoc, propertyComputer: MentionPropertyComputer): CorefDoc = {
+  def createCorefDoc(rawDoc: Document, propertyComputer: MentionPropertyComputer): CorefDoc = {
     val (goldMentions, goldClustering) = extractGoldMentions(rawDoc, propertyComputer);
     if (goldMentions.size == 0) {
       Logger.logss("WARNING: no gold mentions on document " + rawDoc.printableDocName);
@@ -31,7 +31,7 @@ class CorefDocAssembler(val langPack: CorefLanguagePack,
     new CorefDoc(rawDoc, goldMentions, goldClustering, predMentions)
   }
   
-  def createCorefDocFancy(rawDoc: ConllDoc, propertyComputer: MentionPropertyComputer, possibleChunks: Seq[Seq[Chunk[Boolean]]]): CorefDoc = {
+  def createCorefDocFancy(rawDoc: Document, propertyComputer: MentionPropertyComputer, possibleChunks: Seq[Seq[Chunk[Boolean]]]): CorefDoc = {
     val (goldMentions, goldClustering) = extractGoldMentions(rawDoc, propertyComputer);
     if (goldMentions.size == 0) {
       Logger.logss("WARNING: no gold mentions on document " + rawDoc.printableDocName);
@@ -41,11 +41,11 @@ class CorefDocAssembler(val langPack: CorefLanguagePack,
     new CorefDoc(rawDoc, goldMentions, goldClustering, predMentions)
   }
   
-  def extractGoldMentions(rawDoc: ConllDoc, propertyComputer: MentionPropertyComputer): (Seq[Mention], OrderedClustering) = {
+  def extractGoldMentions(rawDoc: Document, propertyComputer: MentionPropertyComputer): (Seq[Mention], OrderedClustering) = {
     CorefDocAssembler.extractGoldMentions(rawDoc, propertyComputer, langPack);
   }
   
-  def extractPredMentions(rawDoc: ConllDoc, propertyComputer: MentionPropertyComputer, gms: Seq[Mention]): Seq[Mention] = {
+  def extractPredMentions(rawDoc: Document, propertyComputer: MentionPropertyComputer, gms: Seq[Mention]): Seq[Mention] = {
     val protoMentionsSorted = getProtoMentionsSorted(rawDoc, gms);
     val finalMentions = new ArrayBuffer[Mention]();
     for (sentProtoMents <- protoMentionsSorted; protoMent <- sentProtoMents) {
@@ -54,7 +54,7 @@ class CorefDocAssembler(val langPack: CorefLanguagePack,
     finalMentions;
   }
   
-  def extractPredMentionsFancy(rawDoc: ConllDoc, propertyComputer: MentionPropertyComputer, gms: Seq[Mention], possibleChunks: Seq[Seq[Chunk[Boolean]]]): Seq[Mention] = {
+  def extractPredMentionsFancy(rawDoc: Document, propertyComputer: MentionPropertyComputer, gms: Seq[Mention], possibleChunks: Seq[Seq[Chunk[Boolean]]]): Seq[Mention] = {
     val protoMentionsSorted = getProtoMentionsSortedFancy(rawDoc, gms, possibleChunks);
     val finalMentions = new ArrayBuffer[Mention]();
     for (sentProtoMents <- protoMentionsSorted; protoMent <- sentProtoMents) {
@@ -63,7 +63,7 @@ class CorefDocAssembler(val langPack: CorefLanguagePack,
     finalMentions;
   }
   
-  private def getProtoMentionsSorted(rawDoc: ConllDoc, gms: Seq[Mention]): Seq[Seq[ProtoMention]] = {
+  private def getProtoMentionsSorted(rawDoc: Document, gms: Seq[Mention]): Seq[Seq[ProtoMention]] = {
     val mentionExtents = (0 until rawDoc.numSents).map(i => new HashSet[ProtoMention]);
     for (sentIdx <- 0 until rawDoc.numSents) {
       // Extract NE spans: filter out O, QUANTITY, CARDINAL, CHUNK
@@ -131,7 +131,7 @@ class CorefDocAssembler(val langPack: CorefLanguagePack,
 //    }
   }
   
-  private def getProtoMentionsSortedFancy(rawDoc: ConllDoc, gms: Seq[Mention], possibleChunks: Seq[Seq[Chunk[Boolean]]]): Seq[Seq[ProtoMention]] = {
+  private def getProtoMentionsSortedFancy(rawDoc: Document, gms: Seq[Mention], possibleChunks: Seq[Seq[Chunk[Boolean]]]): Seq[Seq[ProtoMention]] = {
     val mentionExtents = (0 until rawDoc.numSents).map(i => new HashSet[ProtoMention]);
     for (sentIdx <- 0 until rawDoc.numSents) {
       // Extract NPs and PRPs *except* for those contained in NE chunks (the NE tagger seems more reliable than the parser)
@@ -154,7 +154,7 @@ class CorefDocAssembler(val langPack: CorefLanguagePack,
     }
   }
   
-  private def filterNonMaximalNPs(rawDoc: ConllDoc, mentionExtents: Seq[HashSet[ProtoMention]]) = {
+  private def filterNonMaximalNPs(rawDoc: Document, mentionExtents: Seq[HashSet[ProtoMention]]) = {
     val filteredProtoMentionsSorted = (0 until rawDoc.numSents).map(i => new ArrayBuffer[ProtoMention]);
     for (sentIdx <- 0 until mentionExtents.size) {
       val protoMentionsByHead = mentionExtents(sentIdx).groupBy(_.headIdx);
@@ -211,7 +211,7 @@ class CorefDocAssembler(val langPack: CorefLanguagePack,
   //////////////////
   
   
-  def createCorefDocWithCoordination(rawDoc: ConllDoc, propertyComputer: MentionPropertyComputer): CorefDoc = {
+  def createCorefDocWithCoordination(rawDoc: Document, propertyComputer: MentionPropertyComputer): CorefDoc = {
     val (goldMentions, goldClustering) = extractGoldMentionsWithCoordination(rawDoc, propertyComputer);
     if (goldMentions.size == 0) {
       Logger.logss("WARNING: no gold mentions on document " + rawDoc.printableDocName);
@@ -220,7 +220,7 @@ class CorefDocAssembler(val langPack: CorefLanguagePack,
     new CorefDoc(rawDoc, goldMentions, goldClustering, predMentions)
   }
   
-  def extractGoldMentionsWithCoordination(rawDoc: ConllDoc, propertyComputer: MentionPropertyComputer): (Seq[Mention], OrderedClustering) = {
+  def extractGoldMentionsWithCoordination(rawDoc: Document, propertyComputer: MentionPropertyComputer): (Seq[Mention], OrderedClustering) = {
     val goldProtoMentionsSorted = getGoldProtoMentionsSortedWithCoordination(rawDoc);
     val finalMentions = new ArrayBuffer[Mention]();
     val goldClusterLabels = new ArrayBuffer[Int]();
@@ -238,7 +238,7 @@ class CorefDocAssembler(val langPack: CorefLanguagePack,
     (finalMentions, OrderedClustering.createFromClusterIds(goldClusterLabels));
   }
   
-  def extractPredMentionsWithCoordination(rawDoc: ConllDoc, propertyComputer: MentionPropertyComputer, gms: Seq[Mention]): Seq[Mention] = {
+  def extractPredMentionsWithCoordination(rawDoc: Document, propertyComputer: MentionPropertyComputer, gms: Seq[Mention]): Seq[Mention] = {
     val protoMentionsSorted = getProtoMentionsSortedWithCoordination(rawDoc, gms);
     val finalMentions = new ArrayBuffer[Mention]();
     for (sentProtoMents <- protoMentionsSorted; protoMent <- sentProtoMents) {
@@ -247,7 +247,7 @@ class CorefDocAssembler(val langPack: CorefLanguagePack,
     finalMentions;
   }
   
-  private def getGoldProtoMentionsSortedWithCoordination(rawDoc: ConllDoc): Seq[Seq[ProtoMentionFancy]] = {
+  private def getGoldProtoMentionsSortedWithCoordination(rawDoc: Document): Seq[Seq[ProtoMentionFancy]] = {
     val goldProtoMentions = for (sentIdx <- 0 until rawDoc.corefChunks.size) yield {
        for (chunk <- rawDoc.corefChunks(sentIdx)) yield {
          val headIndices = rawDoc.trees(sentIdx).getSpanHeadOrNPCoordinatedHeads(chunk.start, chunk.end);
@@ -257,7 +257,7 @@ class CorefDocAssembler(val langPack: CorefLanguagePack,
     goldProtoMentions.map(_.sortBy(ment => (ment.sentIdx, ment.headIndices.head, ment.endIdx, ment.startIdx)));
   }
   
-  private def getProtoMentionsSortedWithCoordination(rawDoc: ConllDoc, gms: Seq[Mention]): Seq[Seq[ProtoMentionFancy]] = {
+  private def getProtoMentionsSortedWithCoordination(rawDoc: Document, gms: Seq[Mention]): Seq[Seq[ProtoMentionFancy]] = {
     val mentionExtents = (0 until rawDoc.numSents).map(i => new HashSet[ProtoMentionFancy]);
     for (sentIdx <- 0 until rawDoc.numSents) {
       // Extract NE spans: filter out O, QUANTITY, CARDINAL, CHUNK
@@ -442,7 +442,7 @@ object CorefDocAssembler {
     new CorefDocAssembler(langPack, useGoldMentions);
   }
   
-  def extractGoldMentions(rawDoc: ConllDoc, propertyComputer: MentionPropertyComputer, langPack: CorefLanguagePack): (Seq[Mention], OrderedClustering) = {
+  def extractGoldMentions(rawDoc: Document, propertyComputer: MentionPropertyComputer, langPack: CorefLanguagePack): (Seq[Mention], OrderedClustering) = {
     val goldProtoMentionsSorted = getGoldProtoMentionsSorted(rawDoc);
     val finalMentions = new ArrayBuffer[Mention]();
     val goldClusterLabels = new ArrayBuffer[Int]();
@@ -460,7 +460,7 @@ object CorefDocAssembler {
     (finalMentions, OrderedClustering.createFromClusterIds(goldClusterLabels));
   }
   
-  def getGoldProtoMentionsSorted(rawDoc: ConllDoc): Seq[Seq[ProtoMention]] = {
+  def getGoldProtoMentionsSorted(rawDoc: Document): Seq[Seq[ProtoMention]] = {
     val goldProtoMentions = for (sentIdx <- 0 until rawDoc.corefChunks.size) yield {
        for (chunk <- rawDoc.corefChunks(sentIdx)) yield {
          val headIdx = rawDoc.trees(sentIdx).getSpanHead(chunk.start, chunk.end);

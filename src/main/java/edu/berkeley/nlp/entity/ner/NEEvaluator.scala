@@ -1,6 +1,6 @@
 package edu.berkeley.nlp.entity.ner
 
-import edu.berkeley.nlp.entity.ConllDoc
+import edu.berkeley.nlp.entity.Document
 import edu.berkeley.nlp.entity.coref.Mention
 import edu.berkeley.nlp.futile.util.Logger
 import edu.berkeley.nlp.entity.coref.CorefSystem
@@ -53,11 +53,11 @@ object NEEvaluator {
     }));
   }
   
-  def evaluate(goldDocs: Seq[ConllDoc], predDocs: Seq[ConllDoc]) {
+  def evaluate(goldDocs: Seq[Document], predDocs: Seq[Document]) {
     evaluateChunks(goldDocs, predDocs.map(_.nerChunks));
   }
 
-  def evaluateChunks(goldDocs: Seq[ConllDoc], allPredChunks: Seq[Seq[Seq[Chunk[String]]]]) {
+  def evaluateChunks(goldDocs: Seq[Document], allPredChunks: Seq[Seq[Seq[Chunk[String]]]]) {
     var correct = 0;
     val correctByLabel = new Counter[String];
     var correctSameHead = 0;

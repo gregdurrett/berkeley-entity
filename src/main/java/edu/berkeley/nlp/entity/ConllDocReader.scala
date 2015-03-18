@@ -38,7 +38,7 @@ class ConllDocReader(val lang: Language,
     case _ => throw new RuntimeException("Bad language, no head finder for " + lang);
   }
   
-  def readConllDocs(fileName: String): Seq[ConllDoc] = {
+  def readConllDocs(fileName: String): Seq[Document] = {
     val fcn = (docID: String, docPartNo: Int, docBySentencesByLines: ArrayBuffer[ArrayBuffer[String]]) => assembleConllDoc(docBySentencesByLines, docID, docPartNo);
     ConllDocReader.readConllDocsGeneral(fileName, fcn);
   }
@@ -283,7 +283,7 @@ object ConllDocReader {
 //    loadRawConllDocsWithSuffix(path, size, if (gold) "gold_conll" else "auto_conll", lang, betterParsesFile);
 //  }
   
-  def loadRawConllDocsWithSuffix(path: String, size: Int, suffix: String, lang: Language = Language.ENGLISH, betterParsesFile: String = ""): Seq[ConllDoc] = {
+  def loadRawConllDocsWithSuffix(path: String, size: Int, suffix: String, lang: Language = Language.ENGLISH, betterParsesFile: String = ""): Seq[Document] = {
     Logger.logss("Loading " + size + " docs from " + path + " ending with " + suffix);
     val rawDir = new File(path);
     if (!rawDir.exists() || !rawDir.canRead() || rawDir.listFiles == null || rawDir.listFiles.isEmpty) {
@@ -292,13 +292,22 @@ object ConllDocReader {
     val rawFiles = rawDir.listFiles.sortBy(_.getAbsolutePath());
     val files = rawFiles.filter(file => file.getAbsolutePath.endsWith(suffix));
     val reader = new ConllDocReader(lang, betterParsesFile);
-    val docs = new ArrayBuffer[ConllDoc];
+    val docs = new ArrayBuffer[Document];
     var docCounter = 0;
     var fileIdx = 0;
     while (fileIdx < files.size && (size == -1 || docCounter < size)) {
-      val newDocs = reader.readConllDocs(files(fileIdx).getAbsolutePath);
-      docs ++= newDocs;
-      docCounter += newDocs.size
+      val pp = files(fileIdx).getAbsolutePath
+      try {
+        Logger.logss("Loading doc: " + pp)
+        val newDocs = reader.readConllDocs(pp);
+        docs ++= newDocs;
+        docCounter += newDocs.size
+      } catch {
+        case e : Exception => {
+          Logger.logss("failed document "+pp)
+          e.printStackTrace(System.err)
+        }
+      }
       fileIdx += 1;
     }
     val numDocs = if (size == -1) docs.size else Math.min(size, files.size);

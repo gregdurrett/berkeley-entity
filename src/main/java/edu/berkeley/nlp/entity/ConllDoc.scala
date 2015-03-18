@@ -17,13 +17,13 @@ case class ConllDoc(val docID: String,
                     val trees: Seq[DepConstTree],
                     val nerChunks: Seq[Seq[Chunk[String]]],
                     val corefChunks: Seq[Seq[Chunk[Int]]],
-                    val speakers: Seq[Seq[String]]) {
+                    val speakers: Seq[Seq[String]]) extends Document {
   
-  val numSents = words.size;
+  override val numSents = words.size;
   
-  def uid = docID -> docPartNo;
+  override def uid = docID -> docPartNo;
   
-  def fileName = {
+  override def fileName = {
     if (docID.contains("/")) {
       docID.substring(docID.lastIndexOf("/") + 1);
     } else {
@@ -31,11 +31,11 @@ case class ConllDoc(val docID: String,
     }
   }
   
-  def printableDocName = docID + " (part " + docPartNo + ")";
+  override def printableDocName = docID + " (part " + docPartNo + ")";
   
-  def isConversation = docID.startsWith("bc") || docID.startsWith("wb");
-  
-  def getCorrespondingNERChunk(sentIdx: Int, headIdx: Int): Option[Chunk[String]] = ConllDoc.getCorrespondingNERChunk(nerChunks(sentIdx), headIdx);
+  override def isConversation = docID.startsWith("bc") || docID.startsWith("wb")
+
+  override def getCorrespondingNERChunk(sentIdx: Int, headIdx: Int): Option[Chunk[String]] = ConllDoc.getCorrespondingNERChunk(nerChunks(sentIdx), headIdx);
 }
 
 object ConllDoc {

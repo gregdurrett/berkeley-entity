@@ -5,13 +5,13 @@ import edu.berkeley.nlp.futile.util.Logger
 import scala.collection.mutable.ArrayBuffer
 import edu.berkeley.nlp.entity.wiki.ACEMunger
 import java.io.File
-import edu.berkeley.nlp.entity.ConllDoc
+import edu.berkeley.nlp.entity.Document
 
 class CorefDocAssemblerACE(dirPath: String) {
   
   val langPack = new EnglishCorefLanguagePack()
 
-  def createCorefDoc(rawDoc: ConllDoc, propertyComputer: MentionPropertyComputer): CorefDoc = {
+  def createCorefDoc(rawDoc: Document, propertyComputer: MentionPropertyComputer): CorefDoc = {
     val (goldMentions, goldClustering) = CorefDocAssembler.extractGoldMentions(rawDoc, propertyComputer, langPack);
     if (goldMentions.size == 0) {
       Logger.logss("WARNING: no gold mentions on document " + rawDoc.printableDocName);

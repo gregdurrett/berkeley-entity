@@ -1,5 +1,5 @@
 package edu.berkeley.nlp.entity.preprocess
-import edu.berkeley.nlp.entity.ConllDoc
+import edu.berkeley.nlp.entity.Document
 import edu.berkeley.nlp.entity.coref.CorefSystem
 import scala.io.Source
 import scala.collection.mutable.ArrayBuffer
@@ -99,8 +99,8 @@ object SentenceSplitter {
     
     def featurize(featureIndexer: Indexer[String], addToIndexer: Boolean): Array[Int] = {
       val featStrs = new ArrayBuffer[String];
-      val pw = prevWord;
-      val fw = followingWord;
+      val pw = if(prevWord.isEmpty) " " else prevWord
+      val fw = if (followingWord.isEmpty) " " else followingWord
       val fwcls = (if (Character.isUpperCase(fw.charAt(0))) "UC" else if (Character.isLowerCase(fw.charAt(0))) "LC" else if (!Character.isLetterOrDigit(fw.charAt(0))) "PU" else "OTHER");
       featStrs += ("Bias=1");
       featStrs += ("LastChar=" + pw.last);
@@ -242,7 +242,7 @@ object SentenceSplitter {
   }
   
   
-  private def readExamplesFromConll(docs: Seq[ConllDoc]): Seq[SplitExample] = {
+  private def readExamplesFromConll(docs: Seq[Document]): Seq[SplitExample] = {
     // N.B. we only loop up until size - 1 since the end of the last sentence
     // has no following context and isn't a good training example.
     // We extract pretty much all positives except for really weird stuff.

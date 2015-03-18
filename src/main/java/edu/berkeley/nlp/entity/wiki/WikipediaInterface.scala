@@ -5,9 +5,8 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.HashMap
 import edu.berkeley.nlp.PCFGLA.CoarseToFineMaxRuleParser
-import edu.berkeley.nlp.entity.ConllDocReader
+import edu.berkeley.nlp.entity.{WikiDocReader, ConllDocReader, GUtil}
 import edu.berkeley.nlp.entity.coref.CorefDocAssembler
-import edu.berkeley.nlp.entity.GUtil
 import edu.berkeley.nlp.entity.coref.Mention
 import edu.berkeley.nlp.entity.coref.MentionPropertyComputer
 import edu.berkeley.nlp.entity.lang.Language
@@ -27,7 +26,7 @@ import edu.berkeley.nlp.entity.wiki._
  * java -cp /path/to/jar -Xmx8g edu.berkeley.nlp.entity.wiki.WikipediaInterface \
  *  -datasetPaths path/to/test-docs-directory-one-doc-per-file,path/to/additional/docs,... \
  *  -wikipediaDumpPath path/to/enwiki-latest-pages-articles.xml
- *  -outputDir path/to/output-file.ser.gz
+ *  -outputPath path/to/output-file.ser.gz
  *
  * Required arguments:
  * -datasetPaths: pointer to CoNLL-formatted files whose mentions we should extract
@@ -211,21 +210,44 @@ object WikipediaInterface {
     val mentionPropertyComputer = new MentionPropertyComputer(None);
     val pmAssembler = CorefDocAssembler(Language.ENGLISH, useGoldMentions = false);
     val gmAssembler = CorefDocAssembler(Language.ENGLISH, useGoldMentions = true);
-    val corefDocs = WikipediaInterface.datasetPaths.split(",").flatMap(path => {
-      if (WikipediaInterface.mentionType == "old") {
+    val corefDocs = WikipediaInterface.datasetPaths.split(",").flatMap(path_ => {
+      var path = path_
+      val mentionType = if(path.contains(":")) {
+        val s = path.split(":")
+        path = s(1)
+        s(0)
+      } else {
+        WikipediaInterface.mentionType
+      }
+      Logger.logss("Loading documents "+mentionType+" "+path)
+      if (mentionType == "old") {
         // Wikification dataset: use only auto_conll and pred mentions
         ConllDocReader.loadRawConllDocsWithSuffix(path, -1, "", Language.ENGLISH).map(doc => pmAssembler.createCorefDoc(doc, mentionPropertyComputer));
-      } else if (WikipediaInterface.mentionType == "ace") {
+      } else if (mentionType == "ace") {
         // ACE: Use gold mentions here
         ConllDocReader.loadRawConllDocsWithSuffix(path, -1, "", Language.ENGLISH).map(doc => gmAssembler.createCorefDoc(doc, mentionPropertyComputer));
-      } else if (WikipediaInterface.mentionType == "ontonotes") {
+      } else if (mentionType == "ontonotes") {
         // OntoNotes: use only auto_conll and pred mentions
         ConllDocReader.loadRawConllDocsWithSuffix(path, -1, docSuffix, Language.ENGLISH).map(doc => pmAssembler.createCorefDoc(doc, mentionPropertyComputer));
+      } else if (mentionType == "wikiser") {
+        WikiDocReader.loadRawWikiDocs(path, -1, docSuffix, Language.ENGLISH).map(doc => {
+          try {
+            gmAssembler.createCorefDoc(doc, mentionPropertyComputer)
+          } catch {
+            case e : Exception => {
+              // there are currently about 30 documents that are having an issue with their references
+              println("FAIL DOCUMENT: "+doc.docID)
+              null
+            }
+          }
+        })
       } else {
         throw new RuntimeException("Unrecognized mention type: " + WikipediaInterface.mentionType);
       }
-    });
+    }).filter(_!=null);
 //    val queries = corefDocs.flatMap(_.predMentions.filter(!_.mentionType.isClosedClass)).flatMap(ment => WikipediaTitleGivenSurfaceDB.extractQueries(ment, ment.headIdx)).toSet;
+
+    // MFL TODO: this is the queries that will have to be rewritten to support the wiki documents.
     val queries = corefDocs.flatMap(_.predMentions.filter(!_.mentionType.isClosedClass)).flatMap(ment => Query.extractQueriesBest(ment).map(_.getFinalQueryStr)).toSet;
     Logger.logss("Extracted " + queries.size + " queries from " + corefDocs.size + " documents");
     val interface = if (WikipediaInterface.categoryDBInputPath != "") {

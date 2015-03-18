@@ -16,7 +16,7 @@ import edu.berkeley.nlp.entity.wiki.WikiAnnotReaderWriter
 
 object ConllDocWriter {
 
-  def writeDoc(writer: PrintWriter, conllDoc: ConllDoc, clustering: OrderedClusteringBound) {
+  def writeDoc(writer: PrintWriter, conllDoc: Document, clustering: OrderedClusteringBound) {
     writeIncompleteConllDoc(writer, conllDoc.docID, conllDoc.docPartNo, conllDoc.words, conllDoc.pos, conllDoc.trees.map(_.constTree), conllDoc.speakers, conllDoc.nerChunks, convertOrderedClusteringBoundToChunks(clustering, conllDoc.words.size));
 //    val corefBits = getCorefBits(conllDoc.words.map(_.size), convertOrderedClusteringBoundToChunks(clustering, conllDoc.words.size));
 //    val numZeroesToAddToPartNo = 3 - conllDoc.docPartNo.toString.size;
@@ -35,7 +35,7 @@ object ConllDocWriter {
   }
   
   def writeDocWithPredAnnotations(writer: PrintWriter,
-                                  conllDoc: ConllDoc,
+                                  conllDoc: Document,
                                   nerChunks: Seq[Seq[Chunk[String]]],
                                   corefClustering: OrderedClusteringBound,
                                   wikiChunks: Option[Seq[Seq[Chunk[String]]]] = None) {
@@ -45,7 +45,7 @@ object ConllDocWriter {
   
   def writeDocWithPredAnnotationsWikiStandoff(writer: PrintWriter,
                                               standoffWriter: PrintWriter,
-                                              conllDoc: ConllDoc,
+                                              conllDoc: Document,
                                               nerChunks: Seq[Seq[Chunk[String]]],
                                               corefClustering: OrderedClusteringBound,
                                               wikiChunks: Seq[Seq[Chunk[String]]]) {
@@ -54,7 +54,7 @@ object ConllDocWriter {
   }
   
   def writeIncompleteConllDoc(writer: PrintWriter,
-                              doc: ConllDoc) {
+                              doc: Document) {
     writeIncompleteConllDocNestedNER(writer, doc.docID, doc.docPartNo, doc.words, doc.pos, doc.trees.map(_.constTree), doc.speakers, doc.nerChunks, doc.corefChunks);
   }
   
@@ -210,7 +210,7 @@ object ConllDocWriter {
     }
   }
   
-  def writeDocIllinoisColumnFormat(writer: PrintWriter, conllDoc: ConllDoc) {
+  def writeDocIllinoisColumnFormat(writer: PrintWriter, conllDoc: Document) {
     writer.println("O\t0\t0\tO\t-X-\t-DOCSTART-\tx\tx\t0");
     
 //    B-LOC   0       0       I-NP    NNP     Portugal        x       x       0

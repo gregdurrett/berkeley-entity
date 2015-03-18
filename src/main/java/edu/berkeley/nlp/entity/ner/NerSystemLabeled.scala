@@ -2,11 +2,10 @@ package edu.berkeley.nlp.entity.ner
 import edu.berkeley.nlp.futile.fig.basic.Indexer
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.JavaConverters._
-import edu.berkeley.nlp.entity.ConllDoc
+import edu.berkeley.nlp.entity._
 import edu.berkeley.nlp.futile.classify.GeneralLogisticRegression
 import edu.berkeley.nlp.entity.coref.CorefSystem
 import edu.berkeley.nlp.futile.util.Logger
-import edu.berkeley.nlp.entity.GUtil
 import edu.berkeley.nlp.futile.classify.SequenceExample
 import edu.berkeley.nlp.futile.fig.basic.IOUtils
 import java.io.FileInputStream
@@ -15,12 +14,9 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.ObjectOutputStream
 import edu.berkeley.nlp.futile.util.Counter
-import edu.berkeley.nlp.entity.Chunk
 import scala.collection.mutable.HashMap
-import edu.berkeley.nlp.entity.ConllDocReader
 import edu.berkeley.nlp.entity.lang.Language
 import scala.util.Random
-import edu.berkeley.nlp.entity.ConllDocWriter
 import edu.berkeley.nlp.math.SloppyMath
 import edu.berkeley.nlp.entity.wiki.WikipediaInterface
 import edu.berkeley.nlp.entity.coref.UID
@@ -194,7 +190,8 @@ object NerSystemLabeled {
 //    transitionMatrix.map(_.map(arr => if (arr != null) arr.map(featureIndexer.getIndex(_)) else null));
 //  }
   
-  def replaceNer(doc: ConllDoc, newChunks: Seq[Seq[Chunk[String]]]) = {
+  def replaceNer(doc: Document, newChunks: Seq[Seq[Chunk[String]]]) = {
+    // MFL TODO: ?? need to make it work either way?
     new ConllDoc(doc.docID, doc.docPartNo, doc.words, doc.pos, doc.trees, newChunks, doc.corefChunks, doc.speakers);
   }
   
@@ -227,7 +224,7 @@ object NerSystemLabeled {
   
   // TRAINING
   
-  def trainNerSystem(trainDocs: Seq[ConllDoc],
+  def trainNerSystem(trainDocs: Seq[Document],
                      maybeBrownClusters: Option[Map[String,String]],
                      nerFeatureSet: Set[String],
                      reg: Double,
@@ -267,7 +264,7 @@ object NerSystemLabeled {
   
   // EVALUATION
   
-  def evaluateNerSystem(nerSystem: NerSystemLabeled, testDocs: Seq[ConllDoc]) {
+  def evaluateNerSystem(nerSystem: NerSystemLabeled, testDocs: Seq[Document]) {
     val labelIndexer = nerSystem.labelIndexer;
     Logger.logss("Extracting test examples");
     val testExamples = extractNerChunksFromConll(testDocs);
@@ -332,7 +329,7 @@ object NerSystemLabeled {
     }
   }
   
-  def extractNerChunksFromConll(docs: Seq[ConllDoc]): Seq[NerExample] = {
+  def extractNerChunksFromConll(docs: Seq[Document]): Seq[NerExample] = {
     val chunkTypeCounts = new Counter[String];
     val examples = docs.flatMap(doc => {
       val chunksToUse = doc.nerChunks

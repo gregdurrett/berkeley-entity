@@ -8,14 +8,14 @@ import edu.berkeley.nlp.entity.sem.SemClasser
 import edu.berkeley.nlp.futile.syntax.Trees.PennTreeRenderer
 import edu.berkeley.nlp.futile.util.Counter
 import edu.berkeley.nlp.entity.Chunk
-import edu.berkeley.nlp.entity.ConllDoc
+import edu.berkeley.nlp.entity.Document
 import edu.berkeley.nlp.entity.Driver;
 import edu.berkeley.nlp.entity.WordNetInterfacer
 
 // TODO: Extract an interface for ConllDoc so I don't have to keep the whole
 // document around...but while I'm feature engineering it's useful to be able
 // to put my hands on anything I want
-class Mention(val rawDoc: ConllDoc,
+class Mention(val rawDoc: Document,
               val mentIdx: Int,
               val sentIdx: Int,
               val startIdx: Int,
@@ -247,7 +247,7 @@ object Mention {
   val StartPosPlaceholder = "<S>";
   val EndPosPlaceholder = "</S>";
   
-  def createMentionComputeProperties(rawDoc: ConllDoc,
+  def createMentionComputeProperties(rawDoc: Document,
                                      mentIdx: Int,
                                      sentIdx: Int,
                                      startIdx: Int,

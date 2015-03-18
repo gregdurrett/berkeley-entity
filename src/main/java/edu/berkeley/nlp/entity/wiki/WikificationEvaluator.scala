@@ -1,12 +1,13 @@
 package edu.berkeley.nlp.entity.wiki
 
-import edu.berkeley.nlp.entity.Chunk
+import edu.berkeley.nlp.entity.{Document, Chunk, GUtil}
 import edu.berkeley.nlp.futile.util.Logger
-import edu.berkeley.nlp.entity.GUtil
 import edu.berkeley.nlp.futile.util.Counter
 import scala.collection.JavaConverters._
 import edu.berkeley.nlp.entity.joint.JointDocACE
 import java.io.PrintWriter
+
+import scala.collection.mutable.ArrayBuffer
 
 object WikificationEvaluator {
   
@@ -78,6 +79,48 @@ object WikificationEvaluator {
     }
     Logger.logss("Results (BOT F1): " + GUtil.renderPRF1(correct, precDenom, recDenom));
   }
+
+
+  // create sets of all the gold document references, and all the documents
+  // that we generate, and then compute an F1
+  def evaluateBOTF1_mfl(results : Map[Document, Seq[(Seq[String], Seq[String], Document)]]) = {
+    // f1 = 2 * precision * recall / (percison + recall)
+    var correct = 0
+    var precDenom = 0
+    var recDenom = 0
+    for((doc, matches) <- results) {
+      var seenBefore = Set[String]()
+      val allGold = Set(matches.flatMap(_._1):_*)
+      val allChoosen = Set(matches.map(_._2(0)):_*) //Set(matches.flatMap(_._2):_*)
+
+      /*for((gold, selected, _) <- matches) {
+        val goldS = Set(gold:_*)
+        val selectedS = Set(selected(0)) //Set(selected:_*)
+        val ints = goldS & selectedS
+        //if(!ints.subsetOf(seenBefore)) {
+          correct += ints.size
+          seenBefore ++= ints
+        //}
+      }*/
+      // TODO: something wrong with computing the set intersection
+
+      val dprecDenom = allChoosen.size
+      val drecDenom = allGold.size
+      var dcorrect = 0
+      allChoosen.foreach(c => {
+        if(isCorrect(allGold.toSeq, c))
+          dcorrect += 1
+      })
+      //val diff = (allGold ++ allChoosen) -- (allGold & allChoosen)
+      //val dcorrect = (allGold & allChoosen).size
+      //Logger.logss("Document f1: "+GUtil.renderPRF1(dcorrect, dprecDenom, drecDenom))
+      precDenom += dprecDenom
+      recDenom += drecDenom
+      correct += dcorrect
+    }
+    Logger.logss("Results (BOT F1): " + GUtil.renderPRF1(correct, precDenom, recDenom))
+  }
+
   
   def convertChunksToBagOfTitles(titles: Iterable[Seq[Chunk[String]]]): Set[String] = {
     val bagOfTitles = titles.flatMap(sentTitles => {

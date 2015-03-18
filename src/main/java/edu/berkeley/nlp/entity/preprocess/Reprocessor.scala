@@ -1,7 +1,7 @@
 package edu.berkeley.nlp.entity.preprocess
 
 import edu.berkeley.nlp.PCFGLA.CoarseToFineMaxRuleParser
-import edu.berkeley.nlp.entity.ConllDoc
+import edu.berkeley.nlp.entity.Document
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import java.io.PrintWriter

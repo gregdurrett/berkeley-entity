@@ -9,22 +9,22 @@ import scala.sys.process.stringSeqToProcess
 import scala.sys.process.Process
 import edu.berkeley.nlp.futile.util.Logger
 import edu.berkeley.nlp.entity.Driver
-import edu.berkeley.nlp.entity.ConllDoc
+import edu.berkeley.nlp.entity.Document
 import edu.berkeley.nlp.entity.ConllDocWriter
 
 class CorefConllScorer(val conllEvalScriptPath: String) {
   
-  def renderFinalScore(conllDocs: Seq[ConllDoc], rawPredClusterings: Seq[OrderedClusteringBound], goldClusterings: Seq[OrderedClusteringBound]) = {
+  def renderFinalScore(conllDocs: Seq[Document], rawPredClusterings: Seq[OrderedClusteringBound], goldClusterings: Seq[OrderedClusteringBound]) = {
     val summary = score(conllDocs, rawPredClusterings, goldClusterings, true);
     CorefConllScorer.processConllString(summary, false);
   }
   
-  def renderSuffStats(conllDoc: ConllDoc, rawPredClustering: OrderedClusteringBound, goldClustering: OrderedClusteringBound) = {
+  def renderSuffStats(conllDoc: Document, rawPredClustering: OrderedClusteringBound, goldClustering: OrderedClusteringBound) = {
     val summary = score(Seq(conllDoc), Seq(rawPredClustering), Seq(goldClustering), false);
     CorefConllScorer.processConllString(summary, true);
   }
   
-  def score(conllDocs: Seq[ConllDoc], rawPredClusterings: Seq[OrderedClusteringBound], goldClusterings: Seq[OrderedClusteringBound], saveTempFiles: Boolean) = {
+  def score(conllDocs: Seq[Document], rawPredClusterings: Seq[OrderedClusteringBound], goldClusterings: Seq[OrderedClusteringBound], saveTempFiles: Boolean) = {
     val predClusterings = if (Driver.doConllPostprocessing) rawPredClusterings.map(_.postprocessForConll()) else rawPredClusterings;
 //    var predFile = File.createTempFile("temp", ".conll");
     val (predFile, goldFile) = if (Driver.conllOutputDir != "" && saveTempFiles) {

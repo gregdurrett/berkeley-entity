@@ -12,6 +12,7 @@ import edu.berkeley.nlp.PCFGLA.ParserData;
 import edu.berkeley.nlp.PCFGLA.TreeAnnotations;
 import edu.berkeley.nlp.entity.ConllDocJustWords;
 import edu.berkeley.nlp.entity.ConllDocReader;
+import edu.berkeley.nlp.entity.WikiDocReader;
 import edu.berkeley.nlp.entity.lang.Language;
 import edu.berkeley.nlp.entity.ner.NerSystemLabeled;
 import edu.berkeley.nlp.futile.fig.basic.IOUtils;
@@ -92,7 +93,7 @@ public class PreprocessingDriver implements Runnable {
   public static boolean useAlternateTokenizer = false;
   
   public static enum Mode {
-    RAW_TEXT, CONLL_JUST_WORDS, REDO_CONLL;
+    RAW_TEXT, CONLL_JUST_WORDS, REDO_CONLL, WIKILIMITED;
   }
   
   public static void main(String[] args) {
@@ -128,6 +129,9 @@ public class PreprocessingDriver implements Runnable {
           Logger.logss("Processed document " + docName + " and wrote result to " + outputDir);
         }
         writer.close();
+      } else if (mode == Mode.WIKILIMITED) {
+          WikiDocReader docReader = new WikiDocReader(Language.ENGLISH, "");
+          WikiPreprocessor.processesDocs(inputDir + "/", outputDir + "/", docReader, splitter, parser, backoffParser, nerSystem);
       } else {
         ConllDocReader docReader = new ConllDocReader(Language.ENGLISH, "");
         for (File inputFile : new File(inputDir).listFiles()) {

@@ -2,7 +2,7 @@ package edu.berkeley.nlp.entity.ner
 
 import scala.collection.mutable.HashMap
 import edu.berkeley.nlp.entity.coref.UID
-import edu.berkeley.nlp.entity.ConllDoc
+import edu.berkeley.nlp.entity.Document
 import edu.berkeley.nlp.entity.GUtil
 import edu.berkeley.nlp.futile.fig.basic.Indexer
 import edu.berkeley.nlp.entity.Driver
@@ -10,14 +10,14 @@ import edu.berkeley.nlp.futile.util.Logger
 
 trait NerPruner {
 
-  def pruneSentence(doc: ConllDoc, sentIdx: Int): Array[Array[String]];
+  def pruneSentence(doc: Document, sentIdx: Int): Array[Array[String]];
 }
 
 @SerialVersionUID(1L)
 class NerPrunerFromModel(val nerModel: NerSystemLabeled,
                          val pruningThreshold: Double) extends NerPruner with Serializable {
   
-  def pruneSentence(doc: ConllDoc, sentIdx: Int): Array[Array[String]] = {
+  def pruneSentence(doc: Document, sentIdx: Int): Array[Array[String]] = {
     val sentMarginals = nerModel.computeLogMarginals(doc.words(sentIdx).toArray, doc.pos(sentIdx).toArray);
     NerPruner.pruneFromMarginals(sentMarginals, nerModel.labelIndexer, pruningThreshold);
   }
@@ -28,7 +28,7 @@ class NerPrunerFromMarginals(val nerMarginals: HashMap[UID,Seq[Array[Array[Float
                              val neLabelIndexer: Indexer[String],
                              val pruningThreshold: Double) extends NerPruner with Serializable  {
   
-  def pruneSentence(doc: ConllDoc, sentIdx: Int): Array[Array[String]] = {
+  def pruneSentence(doc: Document, sentIdx: Int): Array[Array[String]] = {
     require(nerMarginals.contains(doc.uid), "Doc ID " + doc.uid + " doesn't have precomputed NER marginals" +
             " and the NER pruner in this model is configured to rely on these. You need to either change" +
             " how you specify the pruner (if training) or use a different model entirely (if testing)");
@@ -42,7 +42,7 @@ class NerPrunerFromMarginalsAndModel(val nerMarginals: HashMap[UID,Seq[Array[Arr
                                      val nerModel: NerSystemLabeled,
                                      val pruningThreshold: Double) extends NerPruner with Serializable {
   
-  def pruneSentence(doc: ConllDoc, sentIdx: Int): Array[Array[String]] = {
+  def pruneSentence(doc: Document, sentIdx: Int): Array[Array[String]] = {
     val sentMarginals = if (nerMarginals.contains(doc.uid)) {
       nerMarginals(doc.uid)(sentIdx)
     } else {

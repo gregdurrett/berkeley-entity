@@ -12,7 +12,7 @@ import edu.berkeley.nlp.entity.coref.CorefDocAssembler
 import scala.collection.mutable.HashMap
 import scala.collection.mutable.ArrayBuffer
 import edu.berkeley.nlp.entity.Chunk
-import edu.berkeley.nlp.entity.ConllDoc
+import edu.berkeley.nlp.entity.Document
 import edu.berkeley.nlp.entity.coref.DocumentGraph
 import edu.berkeley.nlp.futile.fig.exec.Execution
 import edu.berkeley.nlp.entity.coref.CorefEvaluator

@@ -15,10 +15,10 @@ import edu.berkeley.nlp.entity.Driver
 import edu.berkeley.nlp.entity.ner.NerFeaturizer
 import scala.collection.mutable.HashSet
 import edu.berkeley.nlp.futile.util.Logger
-import edu.berkeley.nlp.entity.ConllDoc
+import edu.berkeley.nlp.entity.Document
 import edu.berkeley.nlp.entity.ner.NerPruner
 
-class JointDoc(val rawDoc: ConllDoc,
+class JointDoc(val rawDoc: Document,
                val docGraph: DocumentGraph,
                val goldNERChunks: Seq[Seq[Chunk[String]]],
                val goldWikiChunks: Seq[Seq[Chunk[String]]]) {
@@ -71,7 +71,7 @@ class JointDoc(val rawDoc: ConllDoc,
 
 object JointDoc {
   
-  def apply(rawDoc: ConllDoc,
+  def apply(rawDoc: Document,
             docGraph: DocumentGraph,
             maybeGoldNERChunks: Option[Seq[Seq[Chunk[String]]]],
             maybeGoldWikiChunks: Option[Seq[Seq[Chunk[String]]]]) = {
@@ -89,7 +89,7 @@ object JointDoc {
   }
   
   def assembleJointDocs(docGraphs: Seq[DocumentGraph],
-                        goldConllDocsForNER: Seq[ConllDoc],
+                        goldConllDocsForNER: Seq[Document],
                         goldWikification: HashMap[String,HashMap[Int,ArrayBuffer[Chunk[String]]]]) = {
     docGraphs.map(docGraph => {
       val rawDoc = docGraph.corefDoc.rawDoc;

@@ -124,7 +124,7 @@ object WikipediaLinkDB {
         }
       }
     }
-    val inLinksMapArrs = inLinksMap.map(entry => entry._1 -> entry._2.toArray);
+    val inLinksMapArrs = inLinksMap.map(entry => entry._1 -> entry._2.toArray); // TODO: WTF: inlinksmap is never written to
     val outLinksMapArrs = outLinksMap.map(entry => entry._1 -> entry._2.toArray);
     val sizes = Array.tabulate(10)(i => 0);
     for (key <- outLinksMapArrs.keySet) {

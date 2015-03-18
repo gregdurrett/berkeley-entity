@@ -406,7 +406,7 @@ object GUtil {
   def argMaxIdxFloat(values: Seq[Float]) = {
     var currIdx = 0;
     var maxIdx = 0;
-    var maxVal = Double.NegativeInfinity;
+    var maxVal = Float.NegativeInfinity;
     while (currIdx < values.size) {
       if (values(currIdx) > maxVal) {
         maxIdx = currIdx;

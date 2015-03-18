@@ -5,13 +5,13 @@ import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.HashMap
 
 import edu.berkeley.nlp.entity.Chunk
-import edu.berkeley.nlp.entity.ConllDoc
+import edu.berkeley.nlp.entity.Document
 import edu.berkeley.nlp.entity.coref.DocumentGraph
 import edu.berkeley.nlp.entity.coref.Mention
 import edu.berkeley.nlp.entity.wiki._
 import edu.berkeley.nlp.futile.util.Logger
 
-class JointDocACE(val rawDoc: ConllDoc,
+class JointDocACE(val rawDoc: Document,
                   val docGraph: DocumentGraph,
                   val goldWikiChunks: Seq[Seq[Chunk[Seq[String]]]]) {
   
@@ -36,7 +36,7 @@ class JointDocACE(val rawDoc: ConllDoc,
 
 object JointDocACE {
   
-  def apply(rawDoc: ConllDoc,
+  def apply(rawDoc: Document,
             docGraph: DocumentGraph,
             maybeGoldWikiChunks: Option[Seq[Seq[Chunk[Seq[String]]]]]) = {
     val goldWikiChunks = if (maybeGoldWikiChunks.isDefined) {
