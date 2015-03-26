@@ -15,6 +15,7 @@ import edu.berkeley.nlp.entity.WordNetInterfacer
 // TODO: Extract an interface for ConllDoc so I don't have to keep the whole
 // document around...but while I'm feature engineering it's useful to be able
 // to put my hands on anything I want
+// ... ok settle down
 class Mention(val rawDoc: Document,
               val mentIdx: Int,
               val sentIdx: Int,
@@ -38,6 +39,16 @@ class Mention(val rawDoc: Document,
   
   var cachedNerPossibilities: Option[Chunk[Counter[String]]] = None;
   var cachedNerGold: Option[Chunk[String]] = None;
+
+  override def toString = {
+    var ret = "{"
+    if(startIdx > 1)
+      ret += rawDoc.words(sentIdx)(startIdx - 1) + " "
+    ret += "["+spanToString+"]"
+    if(endIdx < rawDoc.words(sentIdx).size-1)
+      ret += rawDoc.words(sentIdx)(endIdx+ 1)
+    ret + "}"
+  }
 
   def speaker = rawDoc.speakers(sentIdx)(headIdx);
 

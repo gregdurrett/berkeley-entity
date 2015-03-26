@@ -146,7 +146,7 @@ class JointQueryDenotationChooser(val featureIndexer: Indexer[String],
   def pickDenotations(queries: Seq[Query], wikiDB: WikipediaInterface) : Seq[String] = {
     val computer = new JointQueryDenotationChoiceComputer(wikiDB, featureIndexer);
     val denotations = queries.map(query => wikiDB.disambiguateBestGetAllOptions(query));
-    val dden = Query.extractDenotationSetWithNil(queries, denotations, 10)
+    val dden = Query.extractDenotationSetWithNil(queries, denotations, JointQueryDenotationChooser.maxNumWikificationOptions)
     val ex = new JointQueryDenotationExample(queries, dden, Array[String](), Array[String]());
     val denotationMarginals = computer.getDenotationLogMarginals(ex, weights)
 
@@ -177,7 +177,8 @@ object JointQueryDenotationChooser {
           // There are multiple possible gold Wikipedia titles for some mentions. Note that
           // NIL (no entry in Wikipedia) is included as an explicit choice, so this includes NILs (as
           // it should according to how the task is defined)
-          val goldLabel = getGoldWikification(goldWikification(docName), ment)
+          val goldLabelp = getGoldWikification(goldWikification(docName), ment)
+          val goldLabel = (goldLabelp ++ goldLabelp.map(wikiDB.redirectsDB.followRedirect(_))).distinct
           if (goldLabel.size >= 1) {
             val queries = Query.extractQueriesBest(ment, true);
             val queryDisambigs = queries.map(wikiDB.disambiguateBestGetAllOptions(_));
@@ -189,6 +190,10 @@ object JointQueryDenotationChooser {
 //            if (correctIndices.isEmpty && 
             if (filterImpossible && correctIndices.isEmpty) {
               numImpossible += 1;
+              println("impossible: "+goldLabel +"\n\tqueries: "+queries+"\n\tdisamb: "+queryDisambigs+"\n\tdentations: "+denotations)
+              if(goldLabel.contains("Lord_Speaker")) {
+                println("wtfwtf")
+              }
             } else {
               exs += new JointQueryDenotationExample(queries, denotations, correctDenotations, goldLabel)
             }

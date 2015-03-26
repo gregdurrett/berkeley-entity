@@ -21,6 +21,8 @@ import edu.berkeley.nlp.entity.WordNetInterfacer
  * DO NOT try to add WordNetInterfacer here! It is not serializable and so
  * everything will explode when we try to serialize the model. So we choose
  * to cache it on the documents even though this is pretty hacky.
+ *
+ * TODO: maybe change to using "transient" fields re:^^
  */
 @SerialVersionUID(1L)
 class PairwiseIndexingFeaturizerJoint(val featureIndexer: Indexer[String],
