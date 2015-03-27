@@ -16,7 +16,8 @@ case class Query(val words: Seq[String],
                  val originalMent: Mention,
                  val finalSpan: (Int, Int),
                  val queryType: String,
-                 val removePuncFromQuery: Boolean = true) {
+                 val removePuncFromQuery: Boolean = true,
+                 val features: List[String] = List[String]()) {
   
   def getFinalQueryStr = {
     val wordsNoPunc = if (removePuncFromQuery) {
@@ -40,9 +41,16 @@ object Query {
   val PluralQueryExpand = true;
   val RemovePuncFromQuery = true;
   val UseFirstHead = true;
-  val MaxQueryLen = 4;
-  val BlackList = Set("the", "a", "my", "your", "his", "her", "our", "their", "its", "this", "that", "these", "those")
-  val PuncList = Set(',', '.', '!', '?', ':', ';', '\'', '"', '(', ')', '[', ']', '{', '}', ' ');
+  val MaxQueryLen = 8;
+  val BlackList = Set(
+    "the", "a", "my", "your", "his", "her", "our",
+    "their", "its", "this", "that", "these", "those",
+    "of"
+  )
+  val PuncList = Set(
+    ',', '.', '!', '?', ':', ';', '\'', '"', '(', ')',
+    '[', ']', '{', '}', ' '
+  )
   
   /**
    * Check if a token is "blacklisted", meaning that we shouldn't form a query that starts with
@@ -73,7 +81,7 @@ object Query {
    * considering different subsets of the words in the mention and munging capitalization and
    * stemming, since lowercasing and dropping a plural-marking "s" are useful for nominals.
    */
-  def extractQueriesBest(ment: Mention, addNilQuery: Boolean = false): Seq[Query] = {
+  def extractQueriesBest_old(ment: Mention, addNilQuery: Boolean = false): Seq[Query] = {
     val queries = new ArrayBuffer[Query];
     val mentWords = ment.words;
     // Try the whole query, then prefixes ending in the head
@@ -106,6 +114,46 @@ object Query {
 //      queries;
 //    }
     queries.filter(!_.getFinalQueryStr.isEmpty) ++ (if (addNilQuery) Seq(Query.makeNilQuery(ment)) else Seq[Query]());
+  }
+
+  def extractQueriesBest(ment: Mention, addNilQuery: Boolean = false): Seq[Query] = {
+    val queries = new ArrayBuffer[Query]()
+    val mentWords = ment.words
+    val relHeadIdx = ment.contextTree.getSpanHeadACECustom(ment.startIdx, ment.endIdx) - ment.startIdx
+    def addQuery(start: Int, end: Int, featsi:List[String]): Unit = {
+      var feats = featsi // gaaaaa
+      val thisSlice = new ArrayBuffer[Query]()
+      val wrds = mentWords.slice(start, end)
+      thisSlice += new Query(wrds, ment, (start, end), "STD", RemovePuncFromQuery, feats)
+      val firstWord = wrds(0)
+      val lastWord = wrds(wrds.size - 1)
+      if((end - start)== 1)
+        feats ++= List("SingleItemQuery")
+      if (!firstWord.map(Character.isUpperCase(_)).reduce(_ || _) && Character.isLowerCase(firstWord(0))) {
+        thisSlice += new Query(Seq(wikiCase(firstWord)) ++ wrds.drop(1), ment, (start, end), "WIKICASED", RemovePuncFromQuery, feats);
+      }
+      // Stemming (but only on head alone)
+      if (PluralQueryExpand && (end - start) == 1 && firstWord.last == 's') {
+        thisSlice ++= thisSlice.map(qu =>
+          new Query(Seq(removePlural(qu.words(0))), ment, (start, end), qu.queryType + "-STEM", RemovePuncFromQuery, feats));
+      }
+      queries ++= thisSlice
+    }
+    addQuery(0, ment.endIdx - ment.startIdx, List("SimpleQuery", "FullTextQuery"))
+    // TODO: make this ignore items that simply add a blacklisted word
+    for(i <- 0 to relHeadIdx) {
+      addQuery(i, relHeadIdx + 1, List("SimpleQuery", "PreHeadQuery"))
+    }
+    for(i <- relHeadIdx+1 until mentWords.size) {
+      addQuery(relHeadIdx, i, List("SimpleQuery", "PostHeadQuery"))
+    }
+    // try filtering words
+    val filterWords = mentWords.filter(!isBlacklisted(_, 0))
+    if(filterWords.size != mentWords.size) {
+      // we lost something, make new query
+      queries += new Query(filterWords, ment, (ment.startIdx, ment.endIdx), "FIT", RemovePuncFromQuery, List("FilteredQuery"))
+    }
+    queries.filter(!_.getFinalQueryStr.isEmpty) ++ (if (addNilQuery) Seq(Query.makeNilQuery(ment)) else Seq[Query]())
   }
   
   def extractDenotationSetWithNil(queries: Seq[Query], queryDisambigs: Seq[Counter[String]], maxDenotations: Int): Seq[String] = {

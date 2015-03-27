@@ -123,6 +123,8 @@ class QueryChoiceComputer(val wikiDB: WikipediaInterface,
       val longQuery = tagsWithin.size > 3;
       feat("DescriptorQueryTags=" + queryDescriptor + "-" + contextTag + (if (longQuery) "...") + tagsWithin.slice(Math.max(0, tagsWithin.size - 3), tagsWithin.size).toString);
       feat("DescriptorHead=" + queryDescriptor + "-" + binSize(querySize) + "-" + ment.headStringLc);
+      for(f <- query.features)
+        feat(f)
       feats.toArray;
     });
   }

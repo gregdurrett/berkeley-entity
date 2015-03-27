@@ -94,19 +94,31 @@ class WikipediaInterface(val titleGivenSurfaceDB: WikipediaTitleGivenSurfaceDB,
   }
   
   def disambiguateBestGetAllOptions(ment: Mention, specifiedHeadIdx: Int) = {
-    auxDB.purgeDisambiguationAll(redirectsDB.followRedirectsCounter(titleGivenSurfaceDB.disambiguateQueriesGetAllOptions(Query.extractQueriesBest(ment).map(_.getFinalQueryStr))));
+    auxDB.purgeDisambiguationAll(
+      redirectsDB.followRedirectsCounter(
+        titleGivenSurfaceDB.disambiguateQueriesGetAllOptions(
+          Query.extractQueriesBest(ment).map(_.getFinalQueryStr))));
   }
   
   def disambiguateBestGetAllOptions(query: Query) = {
-    auxDB.purgeDisambiguationAll(redirectsDB.followRedirectsCounter(titleGivenSurfaceDB.disambiguateQueriesGetAllOptions(Seq(query.getFinalQueryStr))));
+    auxDB.purgeDisambiguationAll(
+      redirectsDB.followRedirectsCounter(
+        titleGivenSurfaceDB.disambiguateQueriesGetAllOptions(
+          Seq(query.getFinalQueryStr))));
   }
   
   def disambiguateBestGetAllReasonableOptions(ment: Mention, specifiedHeadIdx: Int) = {
-    auxDB.purgeDisambiguationAll(redirectsDB.followRedirectsCounter(titleGivenSurfaceDB.disambiguateQueriesGetAllReasonableOptions(Query.extractQueriesBest(ment).map(_.getFinalQueryStr))));
+    auxDB.purgeDisambiguationAll(
+      redirectsDB.followRedirectsCounter(
+        titleGivenSurfaceDB.disambiguateQueriesGetAllReasonableOptions(
+          Query.extractQueriesBest(ment).map(_.getFinalQueryStr))));
   }
   
   def disambiguateBestGetAllOneBestOptions(ment: Mention, specifiedHeadIdx: Int) = {
-    auxDB.purgeDisambiguationAll(redirectsDB.followRedirectsCounter(titleGivenSurfaceDB.disambiguateQueriesGetAllOneBestOptions(Query.extractQueriesBest(ment).map(_.getFinalQueryStr))));
+    auxDB.purgeDisambiguationAll(
+      redirectsDB.followRedirectsCounter(
+        titleGivenSurfaceDB.disambiguateQueriesGetAllOneBestOptions(
+          Query.extractQueriesBest(ment).map(_.getFinalQueryStr))));
   }
   
   def getCategories(title: String) = categoryDB.getCategories(title);

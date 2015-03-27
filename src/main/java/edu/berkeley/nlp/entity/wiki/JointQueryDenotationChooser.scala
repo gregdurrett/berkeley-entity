@@ -180,7 +180,11 @@ object JointQueryDenotationChooser {
           val goldLabelp = getGoldWikification(goldWikification(docName), ment)
           val goldLabel = (goldLabelp ++ goldLabelp.map(wikiDB.redirectsDB.followRedirect(_))).distinct
           if (goldLabel.size >= 1) {
+            //val oldqueries = Query.extractQueriesBest_old(ment, true);
             val queries = Query.extractQueriesBest(ment, true);
+            /*if(!(Set(oldqueries.map(_.getFinalQueryStr):_*) subsetOf Set(queries.map(_.getFinalQueryStr):_*))) {
+              println("failed")
+            }*/
             val queryDisambigs = queries.map(wikiDB.disambiguateBestGetAllOptions(_));
 //            val denotations = queries.map(wikiDB.disambiguateBestNoDisambig(_));
             val denotations = Query.extractDenotationSetWithNil(queries, queryDisambigs, maxNumWikificationOptions);
@@ -225,7 +229,7 @@ object JointQueryDenotationChooser {
   val batchSize = 1
   val numItrs = 20
   
-  val maxNumWikificationOptions = 7
+  val maxNumWikificationOptions = 20 //7
 
   val numLoadedSamples = -1 // for debugging by loading less samples
   
