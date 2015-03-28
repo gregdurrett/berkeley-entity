@@ -183,10 +183,11 @@ object JointQueryDenotationChooser {
             //val oldqueries = Query.extractQueriesBest_old(ment, true);
             val queries = Query.extractQueriesBest(ment, true);
             /*if(!(Set(oldqueries.map(_.getFinalQueryStr):_*) subsetOf Set(queries.map(_.getFinalQueryStr):_*))) {
-              println("failed")
+              println("failed...")
             }*/
-            val queryDisambigs = queries.map(wikiDB.disambiguateBestGetAllOptions(_));
+            //val queryDisambigs = queries.map(wikiDB.disambiguateBestGetAllOptions(_));
 //            val denotations = queries.map(wikiDB.disambiguateBestNoDisambig(_));
+            val queryDisambigs = queries.map(wikiDB.disambigRes(_))
             val denotations = Query.extractDenotationSetWithNil(queries, queryDisambigs, maxNumWikificationOptions);
             val correctDenotations = denotations.filter(denotation => isCorrect(goldLabel, denotation))
             // N.B. The use of "isCorrect" here is needed to canonicalize 

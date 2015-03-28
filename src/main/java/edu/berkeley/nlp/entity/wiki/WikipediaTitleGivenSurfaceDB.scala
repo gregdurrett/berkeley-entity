@@ -12,6 +12,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.HashMap
 
 // Need to know all titles (including redirects)
+// determins what surfaces values link to with a given count
 @SerialVersionUID(1L)
 class WikipediaTitleGivenSurfaceDB(val surfaceToTitle: CounterMap[String,String]) extends Serializable {
   val truecaseMap = new HashMap[String,ArrayBuffer[String]];

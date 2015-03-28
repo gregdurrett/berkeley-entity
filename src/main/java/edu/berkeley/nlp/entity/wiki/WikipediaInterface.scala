@@ -106,7 +106,11 @@ class WikipediaInterface(val titleGivenSurfaceDB: WikipediaTitleGivenSurfaceDB,
         titleGivenSurfaceDB.disambiguateQueriesGetAllOptions(
           Seq(query.getFinalQueryStr))));
   }
-  
+
+  def disambigRes(query: Query) = {
+    titleGivenSurfaceDB.disambiguateQueriesGetAllOptions(Seq(query.getFinalQueryStr))
+  }
+
   def disambiguateBestGetAllReasonableOptions(ment: Mention, specifiedHeadIdx: Int) = {
     auxDB.purgeDisambiguationAll(
       redirectsDB.followRedirectsCounter(
