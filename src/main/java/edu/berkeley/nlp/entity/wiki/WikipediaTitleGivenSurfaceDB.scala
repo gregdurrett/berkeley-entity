@@ -90,7 +90,9 @@ object WikipediaTitleGivenSurfaceDB {
   val PuncList = Set(',', '.', '!', '?', ':', ';', '\'', '"', '(', ')', '[', ']', '{', '}', ' ');
 
   def isGoodTitle(str: String) = !str.contains("#") && !str.contains(":") && !str.contains("Wikipedia") && !str.startsWith("List of") && !str.startsWith("List_of");
-  
+
+  // this is using the set of generated queries to determine which are the best items to extract
+  // / limit the size of the extracted wiki data
   def processWikipedia(wikipediaPath: String, querySet: Set[String]): WikipediaTitleGivenSurfaceDB = {
     val lowercase = false;
     val surfaceToTitle = new CounterMap[String,String];
@@ -130,13 +132,13 @@ object WikipediaTitleGivenSurfaceDB {
     Logger.logss(querySet.size + " queries, " + counter + " lines processed, " + surfaceToTitle.size + " surface strings found, " +
                  surfaceToTitle.totalCount + " total count");
     // .toSeq here to avoid a ConcurrentModificationException
-    for (key <- surfaceToTitle.keySet.asScala.toSeq) {
+    /*for (key <- surfaceToTitle.keySet.asScala.toSeq) {
       surfaceToTitle.getCounter(key).pruneKeysBelowThreshold(1.5);
       surfaceToTitle.getCounter(key).removeKey("");
       if (surfaceToTitle.getCounter(key).isEmpty) {
         surfaceToTitle.removeKey(key);
       }
-    }
+    }*/
     new WikipediaTitleGivenSurfaceDB(surfaceToTitle);
   }
   

@@ -100,6 +100,7 @@ object Query {
       if (!firstWord.map(Character.isUpperCase(_)).reduce(_ || _) && Character.isLowerCase(firstWord(0))) {
         queriesThisSlice += new Query(Seq(wikiCase(firstWord)) ++ mentWords.slice(indices._1 + 1, indices._2), ment, indices, "WIKICASED", RemovePuncFromQuery);
       }
+
       // Stemming (but only on head alone)
       if (PluralQueryExpand && (indices._2 - indices._1) == 1 && firstWord.last == 's') {
         queriesThisSlice ++= queriesThisSlice.map(query => new Query(Seq(removePlural(query.words(0))), ment, indices, query.queryType + "-STEM", RemovePuncFromQuery));
@@ -124,18 +125,23 @@ object Query {
       var feats = featsi // gaaaaa
       val thisSlice = new ArrayBuffer[Query]()
       val wrds = mentWords.slice(start, end)
-      thisSlice += new Query(wrds, ment, (start, end), "STD", RemovePuncFromQuery, feats)
+      thisSlice += new Query(wrds, ment, (start, end), "STD", true, feats ++ List("RemovedPunc"))
+      thisSlice += new Query(wrds, ment, (start, end), "STD", false, feats ++ List("IncludePunc"))
       val firstWord = wrds(0)
       val lastWord = wrds(wrds.size - 1)
       if((end - start)== 1)
         feats ++= List("SingleItemQuery")
       if (!firstWord.map(Character.isUpperCase(_)).reduce(_ || _) && Character.isLowerCase(firstWord(0))) {
-        thisSlice += new Query(Seq(wikiCase(firstWord)) ++ wrds.drop(1), ment, (start, end), "WIKICASED", RemovePuncFromQuery, feats);
+        thisSlice += new Query(Seq(wikiCase(firstWord)) ++ wrds.drop(1), ment, (start, end), "WIKICASED", true, feats ++ List("RemovedPunc"));
+        thisSlice += new Query(Seq(wikiCase(firstWord)) ++ wrds.drop(1), ment, (start, end), "WIKICASED", false, feats ++ List("IncludePunc"));
       }
       // Stemming (but only on head alone)
       if (PluralQueryExpand && (end - start) == 1 && firstWord.last == 's') {
         thisSlice ++= thisSlice.map(qu =>
-          new Query(Seq(removePlural(qu.words(0))), ment, (start, end), qu.queryType + "-STEM", RemovePuncFromQuery, feats));
+          new Query(Seq(removePlural(qu.words(0))), ment, (start, end), qu.queryType + "-STEM", true, feats ++ List("RemovedPunc")));
+        thisSlice ++= thisSlice.map(qu =>
+          new Query(Seq(removePlural(qu.words(0))), ment, (start, end), qu.queryType + "-STEM", false, feats ++ List("IncludePunc")));
+
       }
       queries ++= thisSlice
     }
@@ -151,7 +157,8 @@ object Query {
     val filterWords = mentWords.filter(!isBlacklisted(_, 0))
     if(filterWords.size != mentWords.size) {
       // we lost something, make new query
-      queries += new Query(filterWords, ment, (ment.startIdx, ment.endIdx), "FIT", RemovePuncFromQuery, List("FilteredQuery"))
+      queries += new Query(filterWords, ment, (ment.startIdx, ment.endIdx), "FIT", true , List("FilteredQuery", "RemovedPunc"))
+      queries += new Query(filterWords, ment, (ment.startIdx, ment.endIdx), "FIT", false, List("FilteredQuery", "IncludePunc"))
     }
     queries.filter(!_.getFinalQueryStr.isEmpty) ++ (if (addNilQuery) Seq(Query.makeNilQuery(ment)) else Seq[Query]())
   }

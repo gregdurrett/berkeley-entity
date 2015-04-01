@@ -74,7 +74,9 @@ class WikipediaInterface(val titleGivenSurfaceDB: WikipediaTitleGivenSurfaceDB,
   def disambiguate(ment: Mention) = disambiguateBest(ment, ment.headIdx)
   
   def disambiguateBest(ment: Mention, specifiedHeadIdx: Int) = {
-    redirectsDB.followRedirect(titleGivenSurfaceDB.disambiguateQueries(Query.extractQueriesBest(ment).map(_.getFinalQueryStr)));
+    redirectsDB.followRedirect(
+      titleGivenSurfaceDB.disambiguateQueries(
+        Query.extractQueriesBest(ment).map(_.getFinalQueryStr)));
   }
   
   def disambiguateBestNoDisambig(query: Query) = {
@@ -107,9 +109,25 @@ class WikipediaInterface(val titleGivenSurfaceDB: WikipediaTitleGivenSurfaceDB,
           Seq(query.getFinalQueryStr))));
   }
 
-  def disambigRes(query: Query) = {
-    titleGivenSurfaceDB.disambiguateQueriesGetAllOptions(Seq(query.getFinalQueryStr))
+  def merge[T](a: Counter[T], b: Counter[T]) = {
+    for(k <- a.keySet().asScala) {
+      b.incrementCount(k, a.getCount(k))
+    }
   }
+
+  def disambigRes(query: Query) = {
+    val str = query.getFinalQueryStr
+    var titles = titleGivenSurfaceDB.disambiguateQueriesGetAllOptions(Seq(str))
+    titles.incrementCount(str, 1.0)
+    var redirs = redirectsDB.followRedirectsCounter(titles)
+    merge(titles, redirs)
+    //var aux = auxDB.purgeDisambiguationAll(redirs)
+    //merge(redirs, aux)
+    //aux
+    redirs
+  }
+
+
 
   def disambiguateBestGetAllReasonableOptions(ment: Mention, specifiedHeadIdx: Int) = {
     auxDB.purgeDisambiguationAll(
@@ -264,7 +282,9 @@ object WikipediaInterface {
 //    val queries = corefDocs.flatMap(_.predMentions.filter(!_.mentionType.isClosedClass)).flatMap(ment => WikipediaTitleGivenSurfaceDB.extractQueries(ment, ment.headIdx)).toSet;
 
     // MFL TODO: this is the queries that will have to be rewritten to support the wiki documents.
-    val queries = corefDocs.flatMap(_.predMentions.filter(!_.mentionType.isClosedClass)).flatMap(ment => Query.extractQueriesBest(ment).map(_.getFinalQueryStr)).toSet;
+    val queries = corefDocs.flatMap(_.predMentions/*.filter(!_.mentionType.isClosedClass)*/)
+      .flatMap(ment => Query.extractQueriesBest(ment).map(_.getFinalQueryStr))
+      .toSet;
     Logger.logss("Extracted " + queries.size + " queries from " + corefDocs.size + " documents");
     val interface = if (WikipediaInterface.categoryDBInputPath != "") {
       val categoryDB = GUtil.load(WikipediaInterface.categoryDBInputPath).asInstanceOf[WikipediaCategoryDB];

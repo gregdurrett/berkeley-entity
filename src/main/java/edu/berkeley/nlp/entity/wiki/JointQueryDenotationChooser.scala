@@ -196,9 +196,9 @@ object JointQueryDenotationChooser {
             if (filterImpossible && correctIndices.isEmpty) {
               numImpossible += 1;
               println("impossible: "+goldLabel +"\n\tqueries: "+queries+"\n\tdisamb: "+queryDisambigs+"\n\tdentations: "+denotations)
-              if(goldLabel.contains("Lord_Speaker")) {
+              /*if(goldLabel.contains("Lord_Speaker")) {
                 println("wtfwtf")
-              }
+              }*/
             } else {
               exs += new JointQueryDenotationExample(queries, denotations, correctDenotations, goldLabel)
             }
