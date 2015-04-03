@@ -193,6 +193,8 @@ object WikipediaInterface {
   
   val categoryDBInputPath = "";
   val categoryDBOutputPath = "";
+
+  val wikiStandoff = "";
   
   def processWikipedia(wikipediaPath: String, queries: Set[String], parser: CoarseToFineMaxRuleParser, backoffParser: CoarseToFineMaxRuleParser): WikipediaInterface = {
     val titleGivenSurface = WikipediaTitleGivenSurfaceDB.processWikipedia(wikipediaPath, queries);
@@ -282,9 +284,21 @@ object WikipediaInterface {
 //    val queries = corefDocs.flatMap(_.predMentions.filter(!_.mentionType.isClosedClass)).flatMap(ment => WikipediaTitleGivenSurfaceDB.extractQueries(ment, ment.headIdx)).toSet;
 
     // MFL TODO: this is the queries that will have to be rewritten to support the wiki documents.
-    val queries = corefDocs.flatMap(_.predMentions/*.filter(!_.mentionType.isClosedClass)*/)
+    var queries = corefDocs.flatMap(_.predMentions/*.filter(!_.mentionType.isClosedClass)*/)
       .flatMap(ment => Query.extractQueriesBest(ment).map(_.getFinalQueryStr))
       .toSet;
+    // some of the gold titles in the older dataset link to current redirect pages
+    // so we are loading them here so we can normalize the redirects when performing training/testing
+    val golds : Set[String] = if(!wikiStandoff.isEmpty) {
+      WikiAnnotReaderWriter.readStandoffAnnotsAsCorpusAnnots(wikiStandoff).flatMap(d => {
+        d._2.flatMap(v => {
+          v._2.flatMap(_.label).map(_.replace("_"," "))
+        })
+      }).toSet
+    } else {
+      Set[String]()
+    }
+    queries = queries ++ golds
     Logger.logss("Extracted " + queries.size + " queries from " + corefDocs.size + " documents");
     val interface = if (WikipediaInterface.categoryDBInputPath != "") {
       val categoryDB = GUtil.load(WikipediaInterface.categoryDBInputPath).asInstanceOf[WikipediaCategoryDB];
