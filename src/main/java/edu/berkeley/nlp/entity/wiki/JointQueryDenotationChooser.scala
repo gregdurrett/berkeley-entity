@@ -143,19 +143,40 @@ class JointQueryDenotationChooser(val featureIndexer: Indexer[String],
     computer.computeDenotation(ex, weights)
   }*/
 
-  def pickDenotations(queries: Seq[Query], wikiDB: WikipediaInterface) : Seq[String] = {
+  def pickDenotations(queries: Seq[Query], wikiDB: WikipediaInterface) : (Seq[(String, Int)], Array[Array[Int]]) = {
     val computer = new JointQueryDenotationChoiceComputer(wikiDB, featureIndexer);
     val denotations = queries.map(query => wikiDB.disambiguateBestGetAllOptions(query));
     val dden = Query.extractDenotationSetWithNil(queries, denotations, JointQueryDenotationChooser.maxNumWikificationOptions)
     val ex = new JointQueryDenotationExample(queries, dden, Array[String](), Array[String]());
     val denotationMarginals = computer.getDenotationLogMarginals(ex, weights)
 
-    ex.allDenotations.zipWithIndex.sortBy(v => denotationMarginals(v._2)).reverse.map(_._1)
+    (ex.allDenotations.zipWithIndex.sortBy(v => denotationMarginals(v._2)).reverse,
+      ex.cachedFeatsEachQuery)
   }
 
-  def diffFeatures(correct: Query, choosen: Query, wikiDB: WikipediaInterface) = {
+  def printEverything(queries: Seq[Query], wikiDB: WikipediaInterface, correctInd: Int) = {
+    // just redo the computations so gg
+    val computer = new JointQueryDenotationChoiceComputer(wikiDB, featureIndexer);
+    val denotations = queries.map(query => wikiDB.disambiguateBestGetAllOptions(query));
+    val dden = Query.extractDenotationSetWithNil(queries, denotations, JointQueryDenotationChooser.maxNumWikificationOptions)
+    val ex = new JointQueryDenotationExample(queries, dden, Array[String](), Array[String]());
+    val denotationMarginals = computer.getDenotationLogMarginals(ex, weights)
 
+    val sortedItms = ex.allDenotations.zipWithIndex.sortBy(v => denotationMarginals(v._2)).reverse
+
+    println(
+      s"""Correct item in $correctInd (${sortedItms(correctInd)._1})
+         |\tGuessed value: ${sortedItms(0)._1}""".stripMargin)
+    for(i <- 0 until queries.length) {
+      println("\t\t"+i+": "+queries(i))
+      println("\t\t"+ex.cachedFeatsEachQuery(i).map(featureIndexer.getObject(_)).mkString(" "))
+      for(j <- 0 until ex.allDenotations.length) {
+        println("\t\t\t"+j+": "+ex.allDenotations(j)+": "+ex.cachedFeatsEachQueryDenotation(i)(j).map(featureIndexer.getObject(_)).mkString(" "))
+      }
+    }
+    println()
   }
+
 }
 
 object JointQueryDenotationChooser {
@@ -195,7 +216,7 @@ object JointQueryDenotationChooser {
 //            if (correctIndices.isEmpty && 
             if (filterImpossible && correctIndices.isEmpty) {
               numImpossible += 1;
-              println("impossible: "+goldLabel +"\n\tqueries: "+queries+"\n\tdisamb: "+queryDisambigs+"\n\tdentations: "+denotations)
+              //println("impossible: "+goldLabel +"\n\tqueries: "+queries+"\n\tdisamb: "+queryDisambigs+"\n\tdentations: "+denotations)
               /*if(goldLabel.contains("Lord_Speaker")) {
                 println("wtfwtf")
               }*/
@@ -286,8 +307,8 @@ object JointQueryDenotationChooser {
 
     val results = testExs.map(t => {
       // TODO: need more then one perdicted title
-      val picks = chooser.pickDenotations(t.queries, wikiDB)
-      if(!isCorrect(t.rawCorrectDenotations, picks(0))) {
+      val (picks, denFeats) = chooser.pickDenotations(t.queries, wikiDB)
+      if(!isCorrect(t.rawCorrectDenotations, picks(0)._1)) {
         // the pick is not correct, attempt to determine if there would have
         // been a better pick that is in the picks list (which basically means all of the
         /*if(picks.size > 1 && isCorrect(t.rawCorrectDenotations, picks(1))) {
@@ -296,21 +317,31 @@ object JointQueryDenotationChooser {
           println("second pick was correct")
 
         }*/
-        var qq = false
-        for((p, i) <- picks.drop(1).zipWithIndex) {
+        var qq = -1
+        for((p, i) <- picks.zipWithIndex) {
           // try: t.correctDenotations here?
-          if(isCorrect(t.correctDenotations, p) || isCorrect(t.rawCorrectDenotations, p)) {
-            println("Found correct item with "+i)
+          if(isCorrect(t.correctDenotations, p._1) || isCorrect(t.rawCorrectDenotations, p._1)) {
+            //println("Found correct item with "+i)
             correctItemWasInSet += 1
-            qq = true
+            qq = i
             //println("found correct item")
           }
         }
-        if(!qq) {
-          println("???")
+        if(qq != -1) {
+          chooser.printEverything(t.queries, wikiDB, qq)
+          /*println(
+            s"""Correct item in place: $qq
+                |\tcorrect value: ${picks(qq)}
+                |\t\t${denFeats(picks(qq)._2).flatMap(featIndexer.getObject(_)).mkString(" ")}
+                |\tchosen value : ${picks(0)}
+                |\t\t${denFeats(picks(0)._2).flatMap(featIndexer.getObject(_)).mkString(" ")}
+              """.stripMargin)
+*/
+        } else {
+          println("THIS QUERY SHOULD HAVE BEEN FILTERED")
         }
       }
-      (t.rawCorrectDenotations, picks, t.queries(0).originalMent.rawDoc)
+      (t.rawCorrectDenotations, picks.map(_._1), t.queries(0).originalMent.rawDoc)
     })
 
     val goldTestDenotationsAsTrivialChunks = (0 until results.size).map(i => new Chunk[Seq[String]](i, i+1, results(i)._1))

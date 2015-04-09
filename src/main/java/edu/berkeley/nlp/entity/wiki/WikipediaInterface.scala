@@ -203,7 +203,7 @@ object WikipediaInterface {
     val links = if (WikipediaInterface.computeLinkDB) {
       WikipediaLinkDB.processWikipedia(wikipediaPath, allPageTargetsLc);
     } else {
-      new WikipediaLinkDB(new Indexer[String], new HashMap[String,Array[Int]], new HashMap[String,Array[Int]]);
+      new WikipediaLinkDB(new Indexer[String], new HashMap[Int,Array[Int]], new HashMap[Int,Array[Int]]);
     }
     val categories = WikipediaCategoryDB.processWikipedia(wikipediaPath, allPageTargetsLc, parser, backoffParser);
     val aux = WikipediaAuxDB.processWikipedia(wikipediaPath, allPageTargetsLc);
@@ -219,7 +219,7 @@ object WikipediaInterface {
     val links = if (WikipediaInterface.computeLinkDB) {
       WikipediaLinkDB.processWikipedia(wikipediaPath, allPageTargetsLc);
     } else {
-      new WikipediaLinkDB(new Indexer[String], new HashMap[String,Array[Int]], new HashMap[String,Array[Int]]);
+      new WikipediaLinkDB(new Indexer[String], new HashMap[Int,Array[Int]], new HashMap[Int,Array[Int]]);
     }
     val aux = WikipediaAuxDB.processWikipedia(wikipediaPath, allPageTargetsLc);
     val wi = new WikipediaInterface(titleGivenSurface, redirects, categoryDB, links, aux);

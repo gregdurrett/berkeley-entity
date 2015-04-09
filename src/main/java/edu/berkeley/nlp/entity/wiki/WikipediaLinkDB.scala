@@ -1,6 +1,7 @@
 package edu.berkeley.nlp.entity.wiki
 
 import edu.berkeley.nlp.futile.fig.basic.Indexer
+import scala.collection.mutable
 import scala.collection.mutable.HashMap
 import scala.collection.mutable.ArrayBuffer
 import edu.berkeley.nlp.futile.fig.basic.IOUtils
@@ -14,33 +15,36 @@ import edu.berkeley.nlp.entity.lang.Language
 import edu.berkeley.nlp.entity.wiki._
 
 @SerialVersionUID(9084163557546777842L)
-class WikipediaLinkDB(val pageNameIndex: Indexer[String],
-                      val inLinksMap: HashMap[String,Array[Int]],
-                      val outLinksMap: HashMap[String,Array[Int]]) extends Serializable {
-  var outLinksSetCache: HashMap[String,Set[Int]] = null;
+class WikipediaLinkDB(private val pageNameIndex: Indexer[String],
+                      private val inLinksMap: HashMap[Int,Array[Int]],
+                      private val outLinksMap: HashMap[Int,Array[Int]]) extends Serializable {
+  @transient
+  var outLinksSetCache = new mutable.HashMap[String,Set[Int]]()
   
   def getOutLinks(title: String) = {
-    if (outLinksMap.contains(title)) {
-      outLinksMap(title);
+    val k = pageNameIndex.indexOf(title)
+    if (outLinksMap.contains(k)) {
+      outLinksMap(k);
     } else {
       Array[Int]();
     }
   }
   
-  def getOutLinksSetUseCache(title: String) = {
-    if (outLinksMap.contains(title)) {
-      if (outLinksSetCache == null) {
-        outLinksSetCache = new HashMap[String,Set[Int]];
-      }
-      if (!outLinksSetCache.contains(title)) {
+  def getOutLinksSetUseCache(title: String) : Set[Int] = {
+    if(outLinksSetCache.contains(title)) {
+      outLinksSetCache(title)
+    } else {
+      val k = pageNameIndex.indexOf(title)
+      if(k != -1) {
         if (outLinksSetCache.size > 1000) {
           outLinksSetCache.dropRight(1);
         }
-        outLinksSetCache.put(title, outLinksMap(title).toSet);
+        val s = outLinksMap(k).toSet
+        outLinksSetCache.put(title, s)
+        s
+      } else {
+        Set[Int]()
       }
-      outLinksSetCache(title);
-    } else {
-      Set[Int]();
     }
   }
   
@@ -56,9 +60,11 @@ class WikipediaLinkDB(val pageNameIndex: Indexer[String],
   }
   
   def doesOneLinkToOther(title1: String, title2: String): Boolean = {
+    val ti1 = pageNameIndex.indexOf(title1)
+    val ti2 = pageNameIndex.indexOf(title2)
     val outLinksTitle1 = getOutLinks(title1);
     val outLinksTitle2 = getOutLinks(title2);
-    outLinksTitle1.contains(pageNameIndex.indexOf(title2)) || outLinksTitle2.contains(pageNameIndex.indexOf(title1)) 
+    outLinksTitle1.contains(ti2) || outLinksTitle2.contains(ti1)
   }
 }
 
@@ -66,18 +72,19 @@ object WikipediaLinkDB {
   
   def processWikipedia(wikipediaPath: String, pageTitleSetLc: Set[String]): WikipediaLinkDB = {
     val pageNamesIndex = new Indexer[String];
-    val inLinksMap = new HashMap[String,HashSet[Int]];
-    val outLinksMap = new HashMap[String,HashSet[Int]];
+    val inLinksMap = new HashMap[Int,HashSet[Int]];
+    val outLinksMap = new HashMap[Int,HashSet[Int]];
     val lines = IOUtils.lineIterator(IOUtils.openInHard(wikipediaPath));
     var currentPageTitle = "";
-    var linksThisPage = new StringBuilder();
+    var currentPageTitleind = 0
+    //var linksThisPage = new StringBuilder();
     var doneWithThisPage = false;
     var numPagesSeen = 0;
     var lineIdx = 0;
-    var isInText = false;
-    val categoryMap = new HashMap[String,ArrayBuffer[String]];
-    val infoboxMap = new HashMap[String,String];
-    val appositiveMap = new HashMap[String,String];
+    //var isInText = false;
+    //val categoryMap = new HashMap[String,ArrayBuffer[String]];
+    //val infoboxMap = new HashMap[String,String];
+    //val appositiveMap = new HashMap[String,String];
     // Extract first line that's not in brackets
     while (lines.hasNext) {
       val line = lines.next;
@@ -96,6 +103,7 @@ object WikipediaLinkDB {
         } else if (line.contains("<title>")) {
           // 7 = "<title>".length()
           currentPageTitle = line.substring(line.indexOf("<title>") + 7, line.indexOf("</title>"));
+          currentPageTitleind = pageNamesIndex.getIndex(currentPageTitle)
           if (!pageTitleSetLc.contains(currentPageTitle.toLowerCase)) {
             doneWithThisPage = true;
           }
@@ -115,15 +123,23 @@ object WikipediaLinkDB {
           }
           if (linkDest != "") {
             val idx = pageNamesIndex.getIndex(linkDest);
-            if (!outLinksMap.contains(currentPageTitle)) {
-              outLinksMap.put(currentPageTitle, new HashSet[Int]);
+            if (!outLinksMap.contains(currentPageTitleind)) {
+              outLinksMap.put(currentPageTitleind, new HashSet[Int]);
             }
-            outLinksMap(currentPageTitle) += idx;
+            outLinksMap(currentPageTitleind) += idx;
           }
           startIdx = line.indexOf("[[", startIdx + 2);
         }
       }
     }
+    outLinksMap.foreach(a => {
+      a._2.foreach(b => {
+        if(!inLinksMap.contains(b)) {
+          inLinksMap.put(b, new mutable.HashSet[Int])
+        }
+        inLinksMap(b) += a._1
+      })
+    })
     val inLinksMapArrs = inLinksMap.map(entry => entry._1 -> entry._2.toArray); // TODO: WTF: inlinksmap is never written to
     val outLinksMapArrs = outLinksMap.map(entry => entry._1 -> entry._2.toArray);
     val sizes = Array.tabulate(10)(i => 0);
