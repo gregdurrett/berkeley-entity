@@ -19,8 +19,11 @@ class WikipediaLinkDB(private val pageNameIndex: Indexer[String],
                       private val inLinksMap: HashMap[Int,Array[Int]],
                       private val outLinksMap: HashMap[Int,Array[Int]]) extends Serializable {
   @transient
-  var outLinksSetCache = new mutable.HashMap[String,Set[Int]]()
-  
+  private var outLinksSetCache : mutable.HashMap[String,Set[Int]] = null
+
+  @transient
+  private var inLinksSetCache : mutable.HashMap[String,Set[Int]] = null
+
   def getOutLinks(title: String) = {
     val k = pageNameIndex.indexOf(title)
     if (outLinksMap.contains(k)) {
@@ -29,17 +32,51 @@ class WikipediaLinkDB(private val pageNameIndex: Indexer[String],
       Array[Int]();
     }
   }
-  
+
+  def getInLinks(title: String) = {
+    val k = pageNameIndex.indexOf(title)
+    if(inLinksMap.contains(k)) {
+      inLinksMap(k)
+    } else {
+      Array[Int]()
+    }
+  }
+
+  def getInLinksSetUseCache(title: String) : Set[Int] = {
+    if(inLinksSetCache == null) {
+      inLinksSetCache = new mutable.HashMap[String,Set[Int]]()
+    }
+    if(inLinksSetCache.contains(title)) {
+      inLinksSetCache(title)
+    } else {
+      val k = pageNameIndex.indexOf(title)
+      if(k != -1) {
+        if (inLinksSetCache.size > 1000) {
+          inLinksSetCache = new mutable.HashMap[String,Set[Int]]()
+        }
+        val s = inLinksMap.getOrElse(k, Array[Int]()).toSet
+        inLinksSetCache.put(title, s)
+        s
+      } else {
+        Set[Int]()
+      }
+    }
+  }
+
   def getOutLinksSetUseCache(title: String) : Set[Int] = {
+    if(outLinksSetCache == null) {
+      outLinksSetCache = new mutable.HashMap[String,Set[Int]]()
+    }
     if(outLinksSetCache.contains(title)) {
       outLinksSetCache(title)
     } else {
       val k = pageNameIndex.indexOf(title)
       if(k != -1) {
         if (outLinksSetCache.size > 1000) {
-          outLinksSetCache.dropRight(1);
+          // dropping one item was taking too long
+          outLinksSetCache = new mutable.HashMap[String,Set[Int]]()
         }
-        val s = outLinksMap(k).toSet
+        val s = outLinksMap.getOrElse(k, Array[Int]()).toSet
         outLinksSetCache.put(title, s)
         s
       } else {
@@ -108,6 +145,11 @@ object WikipediaLinkDB {
             doneWithThisPage = true;
           }
         } else if (line.contains("<redirect title")) {
+          val linkDest = line.substring(line.indexOf("title=\"") + 7, line.indexOf("\" />"))
+          val idx = pageNamesIndex.getIndex(linkDest)
+          val hs = new HashSet[Int]
+          hs.add(idx)
+          outLinksMap.put(currentPageTitleind, hs)
           doneWithThisPage = true;
         }
         var startIdx = line.indexOf("[[");

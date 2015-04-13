@@ -18,6 +18,8 @@ import edu.berkeley.nlp.entity.ConllDocReader
 import edu.berkeley.nlp.entity.coref.CorefDocAssembler
 import edu.berkeley.nlp.entity.coref.MentionPropertyComputer
 
+import scala.collection.mutable
+
 case class QueryChoiceExample(val queries: Seq[Query],
                               val denotations: Seq[String],
                               val correctQueryIndices: Array[Int]) {
@@ -125,6 +127,154 @@ class QueryChoiceComputer(val wikiDB: WikipediaInterface,
       feat("DescriptorHead=" + queryDescriptor + "-" + binSize(querySize) + "-" + ment.headStringLc);
       for(f <- query.features)
         feat(f)
+      feats.toArray;
+    });
+  }
+
+  def getDentationLinksSets(denotations: Seq[String], wikiDB: WikipediaInterface) : (Seq[Set[Int]], Seq[Set[Int]]) = {
+    (denotations.map(wikiDB.linksDB.getInLinksSetUseCache(_)), denotations.map(wikiDB.linksDB.getOutLinksSetUseCache(_)))
+  }
+
+  val logsv = (0 until 3000).map(Math.log(_))
+
+  def logs(i: Int) = {
+    if(i < logsv.size)
+      logsv(i)
+    else
+      Math.log(i)
+  }
+
+  def unionSize[T](ss: Set[T]*) = {
+    val ns = new mutable.HashSet[T]()
+    for(s <- ss) {
+      ns ++= s
+    }
+    ns.size
+  }
+
+  def intersectSize[T](a: Set[T], b: Set[T]) = {
+    var smaller: Set[T] = a
+    var larger: Set[T] = b
+    if(a.size > b.size) {
+      larger = a
+      smaller = b
+    }
+    var ret = 0
+    for(i <- smaller) {
+      if(larger.contains(i))
+        ret += 1
+    }
+    ret
+  }
+
+  def NGD[T](a: Set[T], b: Set[T], wsize: Int) : Double = {
+    (logs(math.max(a.size, b.size)) - logs(intersectSize(a,b))) /
+      (logs(wsize) - logs(math.min(a.size,b.size)))
+  }
+
+  def PMI[T](a: Set[T], b: Set[T], wsize: Int) : Double = {
+    // TODO: ? the use of wsize here does not make since
+    // must be misunderstanding something
+    (intersectSize(a,b) * wsize).asInstanceOf[Float] / (a.size * b.size)
+  }
+
+  def GLOWfeatures[T](fn: (Set[T], Set[T], Int) => Double, refs: Seq[Set[T]], prefix: String): Seq[Array[String]] = {
+    val rsize = refs.size
+    val wsize = unionSize(refs:_*)
+    var max = Double.NegativeInfinity
+    var avg = 0.0
+    // TODO: rank the items in the list
+    //val valList = new mutable.MutableList[Double]()
+    val cache = new mutable.HashMap[Int,Double] {
+      override def initialSize: Int = rsize*rsize
+    }
+    for(a <- 0 until rsize; b <- 0 until rsize) {
+      if(a != b) {
+        val v = fn(refs(a), refs(b), wsize)
+        cache.put(a + b*65536, v)
+        if(v > max)
+          max = v
+        //valList += v
+        avg += v
+      }
+    }
+    avg /= (rsize * (rsize - 1))
+    for(a <- 0 until rsize) yield {
+      var isInMax = false
+      var isAboveAvg = false
+      var isAboveAvg2 = false
+      for(b <- 0 until rsize) {
+        if(a != b) {
+          //val v = fn(refs(a),refs(b),wsize)
+          val v : Double = cache.getOrElse(a + b*65536, 0.0)
+          if(v == max) {
+            isInMax = true
+          }
+          if(v > avg) {
+            isAboveAvg = true
+          }
+          if(v > (avg * 2)) {
+            isAboveAvg2 = true
+          }
+        }
+      }
+      val r = new ArrayBuffer[String]
+      if(isInMax)
+        r += prefix + "IsInMax"
+      if(isAboveAvg)
+        r += prefix + "isAboveAvg"
+      if(isAboveAvg2)
+        r += prefix + "isAboveAvg2"
+      r.toArray
+    }
+  }
+
+  def featurizeQueriesAndDenotations_GLOW(queries: Seq[Query], denotations: Seq[String], addToIndexer: Boolean, wikiDB: WikipediaInterface): Array[Array[Array[Int]]] = {
+    val queryOutcomes = queries.map(query => wikiDB.disambiguateBestGetAllOptions(query));
+    val queryNonemptyList = queryOutcomes.map(_.isEmpty);
+    val ment = queries.head.originalMent;
+    val mentUpToHeadSize = ment.headIdx - ment.startIdx + 1;
+    val (refLinksIn, refLinksOut) = getDentationLinksSets(denotations, wikiDB)
+
+    val PMINGDvals = Seq(
+      GLOWfeatures[Int](PMI, refLinksIn, "PMI-in-"),
+      GLOWfeatures[Int](NGD, refLinksIn, "NGD-in-"),
+      GLOWfeatures[Int](PMI, refLinksOut, "PMI-out-"),
+      GLOWfeatures[Int](NGD, refLinksOut, "NGD-out-")
+    )
+    // TODO: this is not correct,.....
+
+
+    Array.tabulate(queries.size, denotations.size)((queryIdx, denIdx) => {
+      val feats = new ArrayBuffer[Int];
+      def feat(str: String) = addFeat(str, feats, addToIndexer);
+      for(p <- PMINGDvals)
+        for(f <- p(denIdx))
+          feat(f)
+      val query = queries(queryIdx);
+      val den = denotations(denIdx);
+      if (den == NilToken) {
+        feat("NilAndQueryNonempty=" + queryNonemptyList(queryIdx));
+      } else if (queryOutcomes(queryIdx).containsKey(den)) {
+        val queryDescriptorWithProper = (if (ment.pos(ment.headIdx - ment.startIdx) == "NNP") "PROP" else "NOM") + "-" + query.queryType;
+        val queryRank = queryOutcomes(queryIdx).getSortedKeys().indexOf(den);
+        feat("Rank=" + queryDescriptorWithProper + "-" + (queryRank + 1))
+        val queryStr = query.getFinalQueryStr;
+        val matchesQuery = den.toLowerCase == queryStr.toLowerCase;
+        feat("MatchesQuery=" + queryDescriptorWithProper + "-" + matchesQuery)
+        if (!matchesQuery) {
+          feat("ContainsQuery=" + queryDescriptorWithProper + "-" + (den.toLowerCase.contains(queryStr.toLowerCase)));
+          feat("StartsWithQuery=" + queryDescriptorWithProper + "-" + (den.toLowerCase.startsWith(queryStr.toLowerCase)));
+          feat("EndsWithQuery=" + queryDescriptorWithProper + "-" + (den.toLowerCase.endsWith(queryStr.toLowerCase)));
+        }
+        val denotationHasParenthetical = den.contains("(") && den.endsWith(")");
+        feat("ContainsParenthetical=" + queryDescriptorWithProper + "-" + denotationHasParenthetical);
+        if (denotationHasParenthetical) {
+          feat("MatchesQueryUpToParen=" + queryDescriptorWithProper + "-" + (den.substring(0, den.indexOf("(")).trim.toLowerCase == queryStr.toLowerCase))
+        }
+      } else {
+        feat("Impossible");
+      }
       feats.toArray;
     });
   }

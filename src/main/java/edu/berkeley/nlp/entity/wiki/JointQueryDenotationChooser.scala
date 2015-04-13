@@ -44,7 +44,7 @@ class JointQueryDenotationChoiceComputer(val wikiDB: WikipediaInterface,
   def featurizeUseCache(ex: JointQueryDenotationExample, addToIndexer: Boolean) {
     if (ex.cachedFeatsEachQuery == null) {
       ex.cachedFeatsEachQuery = queryChooser.featurizeQueries(ex.queries, addToIndexer)
-      ex.cachedFeatsEachQueryDenotation = queryChooser.featurizeQueriesAndDenotations(ex.queries, ex.allDenotations, addToIndexer)
+      ex.cachedFeatsEachQueryDenotation = queryChooser.featurizeQueriesAndDenotations_GLOW(ex.queries, ex.allDenotations, addToIndexer, wikiDB)
     }
   }
   

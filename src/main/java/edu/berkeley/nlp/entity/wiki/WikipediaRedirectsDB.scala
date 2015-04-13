@@ -48,6 +48,7 @@ object WikipediaRedirectsDB {
   val CapitalizeInitial = true;
   
   def removeWeirdMarkup(str: String) = {
+    // TODO: this is a slow method, don't use
     str.replace("&#039;", "'");
   }
   
