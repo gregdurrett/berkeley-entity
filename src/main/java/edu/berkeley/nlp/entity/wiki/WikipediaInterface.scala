@@ -56,7 +56,8 @@ class WikipediaInterface(val titleGivenSurfaceDB: WikipediaTitleGivenSurfaceDB,
                          val redirectsDB: WikipediaRedirectsDB,
                          val categoryDB: WikipediaCategoryDB,
                          val linksDB: WikipediaLinkDB,
-                         val auxDB: WikipediaAuxDB) extends Serializable {
+                         val auxDB: WikipediaAuxDB,
+                         val textDB: WikipediaTextDB) extends Serializable {
   
   def getStandardPriorForJointModel(ment: Mention) = {
     val counter = new Counter[String];
@@ -207,7 +208,8 @@ object WikipediaInterface {
     }
     val categories = WikipediaCategoryDB.processWikipedia(wikipediaPath, allPageTargetsLc, parser, backoffParser);
     val aux = WikipediaAuxDB.processWikipedia(wikipediaPath, allPageTargetsLc);
-    val wi = new WikipediaInterface(titleGivenSurface, redirects, categories, links, aux);
+    val texts = WikipediaTextDB.processWikipedia(wikipediaPath, allPageTargetsLc);
+    val wi = new WikipediaInterface(titleGivenSurface, redirects, categories, links, aux, texts);
     wi.printSome();
     wi;
   }
@@ -222,7 +224,8 @@ object WikipediaInterface {
       new WikipediaLinkDB(new Indexer[String], new HashMap[Int,Array[Int]], new HashMap[Int,Array[Int]]);
     }
     val aux = WikipediaAuxDB.processWikipedia(wikipediaPath, allPageTargetsLc);
-    val wi = new WikipediaInterface(titleGivenSurface, redirects, categoryDB, links, aux);
+    val texts = WikipediaTextDB.processWikipedia(wikipediaPath, allPageTargetsLc);
+    val wi = new WikipediaInterface(titleGivenSurface, redirects, categoryDB, links, aux, texts);
     wi.printSome();
     wi;
   }

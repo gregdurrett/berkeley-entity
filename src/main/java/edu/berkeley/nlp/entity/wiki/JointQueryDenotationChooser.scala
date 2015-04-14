@@ -284,7 +284,9 @@ object JointQueryDenotationChooser {
     // Make training examples, filtering out those with solutions that are unreachable because
     // they're not good for training
     val trainExs = extractExamples(trainCorefDocs, goldWikification, wikiDB, filterImpossible = true)
-    
+
+    // going to have make this system work on a set of a document
+
     // Extract features
     val featIndexer = new Indexer[String]
     val computer = new JointQueryDenotationChoiceComputer(wikiDB, featIndexer);

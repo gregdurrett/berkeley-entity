@@ -167,7 +167,7 @@ class QueryChoiceComputer(val wikiDB: WikipediaInterface,
     ret
   }
 
-  def NGD[T](a: Set[T], b: Set[T], wsize: Int) : Double = {
+  /*def NGD[T](a: Set[T], b: Set[T], wsize: Int) : Double = {
     (logs(math.max(a.size, b.size)) - logs(intersectSize(a,b))) /
       (logs(wsize) - logs(math.min(a.size,b.size)))
   }
@@ -227,7 +227,7 @@ class QueryChoiceComputer(val wikiDB: WikipediaInterface,
         r += prefix + "isAboveAvg2"
       r.toArray
     }
-  }
+  }*/
 
   def featurizeQueriesAndDenotations_GLOW(queries: Seq[Query], denotations: Seq[String], addToIndexer: Boolean, wikiDB: WikipediaInterface): Array[Array[Array[Int]]] = {
     val queryOutcomes = queries.map(query => wikiDB.disambiguateBestGetAllOptions(query));
@@ -236,21 +236,36 @@ class QueryChoiceComputer(val wikiDB: WikipediaInterface,
     val mentUpToHeadSize = ment.headIdx - ment.startIdx + 1;
     val (refLinksIn, refLinksOut) = getDentationLinksSets(denotations, wikiDB)
 
-    val PMINGDvals = Seq(
+    /*val PMINGDvals = Seq(
       GLOWfeatures[Int](PMI, refLinksIn, "PMI-in-"),
       GLOWfeatures[Int](NGD, refLinksIn, "NGD-in-"),
       GLOWfeatures[Int](PMI, refLinksOut, "PMI-out-"),
       GLOWfeatures[Int](NGD, refLinksOut, "NGD-out-")
-    )
+    )*/
+
     // TODO: this is not correct,.....
+    // we need to know what we are going to annonate stuff in the document with,
+    // these are going to be denotations for a single example, which won't be useful
+    // so we need to get all the possible annontations for a given document
+    //
+    // in the wikification paper they have something that is choosing the references together
+    // need to look at pairs of references and
+
+
+
+
+    // TODO: implement the local vector features which compare the text of the pages
+    // the context can be the set of items linking into/outof a page? but then that isn't the similarity
+
 
 
     Array.tabulate(queries.size, denotations.size)((queryIdx, denIdx) => {
       val feats = new ArrayBuffer[Int];
       def feat(str: String) = addFeat(str, feats, addToIndexer);
-      for(p <- PMINGDvals)
+      /*for(p <- PMINGDvals)
         for(f <- p(denIdx))
           feat(f)
+      */
       val query = queries(queryIdx);
       val den = denotations(denIdx);
       if (den == NilToken) {
