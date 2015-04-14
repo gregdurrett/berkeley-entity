@@ -12,10 +12,10 @@ import scala.collection.mutable
 /**
  * Created by matthewfl
  *
- * Provide proxy bow counts for documents so we can compute the similarity between two documents
+ * Provide bow counts for documents so we can compute the similarity between two documents
  */
 @SerialVersionUID(1L)
-class WikipediaTextDB (val indexer: Indexer[String], val words: mutable.HashMap[String, Counter[Int]]) {
+class WikipediaTextDB (val indexer: Indexer[String], val words: mutable.HashMap[String, Array[Int]]) extends Serializable {
 
 
 }
@@ -26,8 +26,8 @@ object WikipediaTextDB {
     var currentPageTitle: String = null
     val indexer = new Indexer[String]
     val totalWordCounts = new Counter[Int]
-    var currentWordCounts = new Counter[Int]
-    val documentResults = new mutable.HashMap[String,Counter[Int]]
+    var currentWordCounts = new mutable.HashSet[Int]
+    val documentResults = new mutable.HashMap[String,Array[Int]]
     var lineIdx = 0
     var numPagesSeen = 0
     var doneWithThisPage = false
@@ -46,16 +46,19 @@ object WikipediaTextDB {
           numPagesSeen += 1
         } else if (line.contains("<title>")) {
           // 7 = "<title>".length()
-          currentPageTitle = line.substring(line.indexOf("<title>") + 7, line.indexOf("</title>"));
-          if (!querySet.contains(currentPageTitle.toLowerCase)) {
+          val newPageTitle = line.substring(line.indexOf("<title>") + 7, line.indexOf("</title>"));
+          if (!querySet.contains(newPageTitle.toLowerCase)) {
             doneWithThisPage = true;
           } else {
-            currentWordCounts = new Counter[Int]()
-            documentResults += (currentPageTitle -> currentWordCounts)
+            if(currentPageTitle != null) {
+              documentResults += (currentPageTitle -> currentWordCounts.toArray)
+            }
+            currentWordCounts = new mutable.HashSet[Int]()
+            currentPageTitle = newPageTitle
           }
         } else if(line.contains("<text")) {
           val textStart = line.indexOf(">") + 1
-          var document = new StringBuilder()
+          val document = new StringBuilder()
           var textEnd = line.indexOf("</text>")
           if(textEnd != -1) {
             document.append(line.substring(textStart, textEnd))
@@ -72,7 +75,8 @@ object WikipediaTextDB {
           document.toString.split("[^A-Za-z]").foreach(w => {
             val i = indexer.getIndex(w)
             totalWordCounts.incrementCount(i, 1.0)
-            currentWordCounts.incrementCount(i, 1.0)
+            currentWordCounts += i
+            //currentWordCounts.incrementCount(i, 1.0)
           })
         }
       }
@@ -83,7 +87,9 @@ object WikipediaTextDB {
     val removeWords = new mutable.HashSet[Int]()
     for(i <- 0 until 300; if wrdsq.hasNext)
       removeWords += wrdsq.next
-    documentResults.foreach(_._2.prune(removeWords))
+    for(k <- documentResults) {
+      documentResults(k._1) = k._2.filter(!removeWords.contains(_)).sorted
+    }
 
 
     new WikipediaTextDB(indexer, documentResults)
