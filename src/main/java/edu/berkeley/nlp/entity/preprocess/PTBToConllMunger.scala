@@ -27,29 +27,40 @@ object PTBToConllMunger {
 //    LightRunner.initializeOutput(PTBToConllMunger.getClass());
     LightRunner.populateScala(PTBToConllMunger.getClass(), args)
     val inputFile = new File(input)
-    val docs: Seq[ConllDoc] = if (inputFile.isDirectory()) {
-      inputFile.listFiles.map(readParsesMakeDocs(_))
-    } else {
-      Seq(readParsesMakeDocs(inputFile))
-    }
     val outputFile = new File(output)
-    if (outputFile.isDirectory()) {
-      for (doc <- docs) {
-        val writer = IOUtils.openOutHard(outputFile.getAbsolutePath() + "/" + doc.docID)
-        ConllDocWriter.writeDoc(writer, doc, new OrderedClusteringBound(Seq[Mention](), new OrderedClustering(Seq[Seq[Int]]())))
-        writer.close
+    var outputWriter = if (outputFile.isDirectory) null else IOUtils.openOutHard(outputFile)
+    for (file <- (if (inputFile.isDirectory) inputFile.listFiles.toSeq else Seq(inputFile))) {
+      val doc = readParsesMakeDoc(file)
+      if (outputWriter == null) {
+        outputWriter = IOUtils.openOutHard(outputFile.getAbsolutePath + "/" + doc.docID)
+        ConllDocWriter.writeDoc(outputWriter, doc)
+        outputWriter.close
+        outputWriter = null
+      } else {
+        ConllDocWriter.writeDoc(outputWriter, doc)
       }
-    } else {
-      val writer = IOUtils.openOutHard(outputFile)
-      for (doc <- docs) {
-        ConllDocWriter.writeDoc(writer, doc, new OrderedClusteringBound(Seq[Mention](), new OrderedClustering(Seq[Seq[Int]]())))
-      }
-      writer.close
     }
+    if (outputWriter != null) {
+      outputWriter.close
+    }
+//    val outputFile = new File(output)
+//    if (outputFile.isDirectory()) {
+//      for (doc <- docs) {
+//        val writer = IOUtils.openOutHard(outputFile.getAbsolutePath() + "/" + doc.docID)
+////        ConllDocWriter.writeDoc(writer, doc, new OrderedClusteringBound(Seq[Mention](), new OrderedClustering(Seq[Seq[Int]]())))
+//        writer.close
+//      }
+//    } else {
+//      val writer = IOUtils.openOutHard(outputFile)
+//      for (doc <- docs) {
+//        ConllDocWriter.writeDoc(writer, doc, new OrderedClusteringBound(Seq[Mention](), new OrderedClustering(Seq[Seq[Int]]())))
+//      }
+//      writer.close
+//    }
 //    LightRunner.finalizeOutput();
   }
   
-  def readParsesMakeDocs(file: File) = {
+  def readParsesMakeDoc(file: File) = {
     val lineItr = IOUtils.lineIterator(IOUtils.openInHard(file))
     val words = new ArrayBuffer[Seq[String]]
     val pos = new ArrayBuffer[Seq[String]]
@@ -58,9 +69,6 @@ object PTBToConllMunger {
       val currLine = lineItr.next.trim
       if (currLine != "" && currLine != "(())") {
         val currParse = PennTreeReader.parseHard(currLine, false)
-//        if (currParse.getYield().size == 0) {
-//          Logger.logss("NO YIELD: " + currLine)
-//        }
         val currDepConstTree = DepConstTree.apply(currParse)
         words += currDepConstTree.words
         pos += currDepConstTree.pos
