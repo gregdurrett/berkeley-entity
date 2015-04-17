@@ -15,7 +15,15 @@ import edu.berkeley.nlp.entity.preprocess.Reprocessor
 import edu.berkeley.nlp.entity.wiki.WikiAnnotReaderWriter
 
 object ConllDocWriter {
+  
+  def writeDoc(writer: PrintWriter, conllDoc: ConllDoc) {
+    writeIncompleteConllDoc(writer, conllDoc)
+  }
 
+  /**
+   * Writes a document with a clustering grafted on (usually what we want for coref experiments,
+   * where only the cluster is changing)
+   */
   def writeDoc(writer: PrintWriter, conllDoc: ConllDoc, clustering: OrderedClusteringBound) {
     writeIncompleteConllDoc(writer, conllDoc.docID, conllDoc.docPartNo, conllDoc.words, conllDoc.pos, conllDoc.trees.map(_.constTree), conllDoc.speakers, conllDoc.nerChunks, convertOrderedClusteringBoundToChunks(clustering, conllDoc.words.size));
 //    val corefBits = getCorefBits(conllDoc.words.map(_.size), convertOrderedClusteringBoundToChunks(clustering, conllDoc.words.size));

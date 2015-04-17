@@ -107,6 +107,38 @@ class ConllDocReader(val lang: Language,
                  corefBitss.map(ConllDocReader.assembleCorefChunks(_)),
                  speakerss)
   }
+  
+  def readConllDocsProcessStreaming[T](fileName: String, fcn: ConllDoc => Unit) {
+    val lineItr = IOUtils.lineIterator(IOUtils.openInHard(fileName));
+    var docBySentencesByLines = new ArrayBuffer[ArrayBuffer[String]];
+    var docID = "";
+    var docPartNo = -1;
+    // Split documents up into parts and sentences
+    while (lineItr.hasNext) {
+      val line = lineItr.next;
+      if (line.startsWith("#begin document")) {
+        val thisLineDocID = line.substring(line.indexOf("(") + 1, line.indexOf(")"));
+        val thisLinePartNo = line.substring(line.indexOf("part ") + 5).trim.toInt;
+        if (docID == "") {
+          docID = thisLineDocID;
+          docPartNo = thisLinePartNo;
+        } else {
+          fcn(assembleConllDoc(docBySentencesByLines, docID, docPartNo));
+          docBySentencesByLines = new ArrayBuffer[ArrayBuffer[String]];
+          docID = thisLineDocID;
+          docPartNo = thisLinePartNo;
+        }
+        docBySentencesByLines += new ArrayBuffer[String]();
+      } else if (line.startsWith("#end document")) {
+        // Do nothing
+      } else if (line.trim.isEmpty) {
+        docBySentencesByLines += new ArrayBuffer[String]();
+      } else {
+        docBySentencesByLines.last += line;
+      }
+    }
+    fcn(assembleConllDoc(docBySentencesByLines, docID, docPartNo));
+  }
 }
 
 object ConllDocReader {
@@ -120,15 +152,15 @@ object ConllDocReader {
   
   def readConllDocsGeneral[T](fileName: String, fcn: (String, Int, ArrayBuffer[ArrayBuffer[String]]) => T): Seq[T] = {
     val results = new ArrayBuffer[T];
-    val allLines = IOUtils.readLinesHard(fileName).asScala;
+    val lineItr = IOUtils.lineIterator(IOUtils.openInHard(fileName));
     var docBySentencesByLines = new ArrayBuffer[ArrayBuffer[String]];
     var docID = "";
     var docPartNo = -1;
     // Split documents up into parts and sentences
-    for (i <- 0 until allLines.size) {
-      val line = allLines(i);
+    while (lineItr.hasNext) {
+      val line = lineItr.next
       if (line.startsWith("#begin document")) {
-        val thisLineDocID = line.substring(allLines(i).indexOf("(") + 1, allLines(i).indexOf(")"));
+        val thisLineDocID = line.substring(line.indexOf("(") + 1, line.indexOf(")"));
         val thisLinePartNo = line.substring(line.indexOf("part ") + 5).trim.toInt;
         if (docID == "") {
           docID = thisLineDocID;
@@ -146,7 +178,7 @@ object ConllDocReader {
       } else if (line.trim.isEmpty) {
         docBySentencesByLines += new ArrayBuffer[String]();
       } else {
-        require(!docBySentencesByLines.isEmpty, fileName + " " + i);
+//        require(!docBySentencesByLines.isEmpty, fileName + " " + i);
         docBySentencesByLines.last += line;
       }
     }
