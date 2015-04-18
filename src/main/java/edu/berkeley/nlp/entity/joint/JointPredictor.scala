@@ -38,8 +38,16 @@ class JointPredictor(val jointFeaturizer: JointFeaturizerShared[NerFeaturizer],
     val computer = new JointComputerShared(fgfOnto);
     (jointDoc: JointDoc) => {
       Logger.logss("Decoding " + jointDoc.rawDoc.printableDocName);
-      val (backptrs, clustering, nerChunks, wikiChunks) = computer.viterbiDecodeProduceAnnotations(jointDoc, weights);
-      ConllDocWriter.writeDocWithPredAnnotationsWikiStandoff(outWriter, outWikiWriter, jointDoc.rawDoc, nerChunks, clustering.bind(jointDoc.docGraph.getMentions, Driver.doConllPostprocessing), wikiChunks);
+      // Don't decode if there are no mentions because things will break
+      if (jointDoc.docGraph.getMentions.size == 0) {
+        if (jointDoc.rawDoc.numSents > 0) {
+          Logger.logss("WARNING: Document with zero mentions but nonzero number of sentences, not running NER but there could be NE mentions")
+        }
+        ConllDocWriter.writeDoc(outWriter, jointDoc.rawDoc)
+      } else {
+        val (backptrs, clustering, nerChunks, wikiChunks) = computer.viterbiDecodeProduceAnnotations(jointDoc, weights);
+        ConllDocWriter.writeDocWithPredAnnotationsWikiStandoff(outWriter, outWikiWriter, jointDoc.rawDoc, nerChunks, clustering.bind(jointDoc.docGraph.getMentions, Driver.doConllPostprocessing), wikiChunks);
+      }
     }
   }
   
