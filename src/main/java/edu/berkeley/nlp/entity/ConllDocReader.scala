@@ -108,13 +108,21 @@ class ConllDocReader(val lang: Language,
                  speakerss)
   }
   
-  def readConllDocsProcessStreaming[T](fileName: String, fcn: ConllDoc => Unit) {
+  /**
+   * 
+   * @param fileName The name of the file to read documents from
+   * @param fcn The function to apply to the CoNLL documents as they are created
+   * @param numDocsToStopAfter Stops after processing this many documents in the current file; -1 for all
+   * @return The number of documents processed
+   */
+  def readConllDocsProcessStreaming[T](fileName: String, fcn: ConllDoc => Unit, numDocsToStopAfter: Int = -1): Int = {
     val lineItr = IOUtils.lineIterator(IOUtils.openInHard(fileName));
+    var docsProcessed = 0
     var docBySentencesByLines = new ArrayBuffer[ArrayBuffer[String]];
     var docID = "";
     var docPartNo = -1;
     // Split documents up into parts and sentences
-    while (lineItr.hasNext) {
+    while (lineItr.hasNext && (numDocsToStopAfter == -1 || docsProcessed < numDocsToStopAfter)) {
       val line = lineItr.next;
       if (line.startsWith("#begin document")) {
         val thisLineDocID = line.substring(line.indexOf("(") + 1, line.indexOf(")"));
@@ -124,6 +132,7 @@ class ConllDocReader(val lang: Language,
           docPartNo = thisLinePartNo;
         } else {
           fcn(assembleConllDoc(docBySentencesByLines, docID, docPartNo));
+          docsProcessed += 1
           docBySentencesByLines = new ArrayBuffer[ArrayBuffer[String]];
           docID = thisLineDocID;
           docPartNo = thisLinePartNo;
@@ -138,6 +147,7 @@ class ConllDocReader(val lang: Language,
       }
     }
     fcn(assembleConllDoc(docBySentencesByLines, docID, docPartNo));
+    docsProcessed + 1
   }
 }
 
@@ -315,14 +325,24 @@ object ConllDocReader {
 //    loadRawConllDocsWithSuffix(path, size, if (gold) "gold_conll" else "auto_conll", lang, betterParsesFile);
 //  }
   
-  def loadRawConllDocsWithSuffix(path: String, size: Int, suffix: String, lang: Language = Language.ENGLISH, betterParsesFile: String = ""): Seq[ConllDoc] = {
-    Logger.logss("Loading " + size + " docs from " + path + " ending with " + suffix);
+  def getFiles(path: String, suffix: String) = {
     val rawDir = new File(path);
     if (!rawDir.exists() || !rawDir.canRead() || rawDir.listFiles == null || rawDir.listFiles.isEmpty) {
       throw new RuntimeException("Couldn't find directory " + path);
     }
     val rawFiles = rawDir.listFiles.sortBy(_.getAbsolutePath());
-    val files = rawFiles.filter(file => file.getAbsolutePath.endsWith(suffix));
+    rawFiles.filter(file => file.getAbsolutePath.endsWith(suffix));
+  }
+  
+  def loadRawConllDocsWithSuffix(path: String, size: Int, suffix: String, lang: Language = Language.ENGLISH, betterParsesFile: String = ""): Seq[ConllDoc] = {
+    Logger.logss("Loading " + size + " docs from " + path + " ending with " + suffix);
+//    val rawDir = new File(path);
+//    if (!rawDir.exists() || !rawDir.canRead() || rawDir.listFiles == null || rawDir.listFiles.isEmpty) {
+//      throw new RuntimeException("Couldn't find directory " + path);
+//    }
+//    val rawFiles = rawDir.listFiles.sortBy(_.getAbsolutePath());
+//    val files = rawFiles.filter(file => file.getAbsolutePath.endsWith(suffix));
+    val files = getFiles(path, suffix)
     val reader = new ConllDocReader(lang, betterParsesFile);
     val docs = new ArrayBuffer[ConllDoc];
     var docCounter = 0;
@@ -339,6 +359,24 @@ object ConllDocReader {
       Logger.logss("WARNING: Zero docs loaded...double check your paths unless you meant for this happen");
     }
     docs.slice(0, numDocs);
+  }
+  
+  /**
+   * Same as loadRawConllDocsWithSuffix but applies a function to the documents as it
+   * reads them and discards the documents; useful for dealing with large datasets
+   */
+  def loadRawConllDocsWithSuffixProcessStreaming(path: String, size: Int, suffix: String, fcn: ConllDoc => Unit, lang: Language = Language.ENGLISH, betterParsesFile: String = "") = {
+    Logger.logss("Processing " + size + " docs from " + path + " ending with " + suffix);
+    val files = getFiles(path, suffix)
+    val reader = new ConllDocReader(lang, betterParsesFile);
+    var docCounter = 0;
+    var fileIdx = 0;
+    while (fileIdx < files.size && (size == -1 || docCounter < size)) {
+      var numDocsRemaining = if (size == -1) Integer.MAX_VALUE else size - docCounter
+      val numDocsProcessed = reader.readConllDocsProcessStreaming(files(fileIdx).getAbsolutePath, fcn, numDocsRemaining)
+      docCounter += numDocsProcessed
+      fileIdx += 1;
+    }
   }
   
   def readDocNames(path: String): Seq[String] = {

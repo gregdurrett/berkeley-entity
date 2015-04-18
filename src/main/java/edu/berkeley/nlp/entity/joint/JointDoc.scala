@@ -88,6 +88,14 @@ object JointDoc {
     new JointDoc(rawDoc, docGraph, goldNERChunks, goldWikiChunks);
   }
   
+  /**
+   * Does not include gold Wikification, but does potentially include gold NER
+   */
+  def assembleJointDoc(docGraph: DocumentGraph,
+                       maybeGoldConllDoc: Option[ConllDoc]): JointDoc = {
+    JointDoc(docGraph.corefDoc.rawDoc, docGraph, maybeGoldConllDoc.map(_.nerChunks), None);
+  }
+  
   def assembleJointDocs(docGraphs: Seq[DocumentGraph],
                         goldConllDocsForNER: Seq[ConllDoc],
                         goldWikification: HashMap[String,HashMap[Int,ArrayBuffer[Chunk[String]]]]) = {

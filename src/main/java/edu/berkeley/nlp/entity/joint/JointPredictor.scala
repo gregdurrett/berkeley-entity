@@ -24,12 +24,24 @@ import edu.berkeley.nlp.futile.util.Logger
 import edu.berkeley.nlp.entity.ner.NEEvaluator
 import edu.berkeley.nlp.entity.coref.CorefEvaluator
 import edu.berkeley.nlp.entity.Driver
+import scala.collection.GenTraversableOnce
+import java.io.PrintWriter
 
 @SerialVersionUID(1L)
 class JointPredictor(val jointFeaturizer: JointFeaturizerShared[NerFeaturizer],
                      val weights: Array[Float],
                      val corefPruner: CorefPruner,
                      val nerPruner: NerPruner) extends Serializable {
+  
+  def makeIndividualDocPredictionWriter(maybeWikipediaInterface: Option[WikipediaInterface], outWriter: PrintWriter, outWikiWriter: PrintWriter): (JointDoc => Unit) = {
+    val fgfOnto = new FactorGraphFactoryOnto(jointFeaturizer, maybeWikipediaInterface);
+    val computer = new JointComputerShared(fgfOnto);
+    (jointDoc: JointDoc) => {
+      Logger.logss("Decoding " + jointDoc.rawDoc.printableDocName);
+      val (backptrs, clustering, nerChunks, wikiChunks) = computer.viterbiDecodeProduceAnnotations(jointDoc, weights);
+      ConllDocWriter.writeDocWithPredAnnotationsWikiStandoff(outWriter, outWikiWriter, jointDoc.rawDoc, nerChunks, clustering.bind(jointDoc.docGraph.getMentions, Driver.doConllPostprocessing), wikiChunks);
+    }
+  }
   
   def decodeWriteOutput(jointTestDocs: Seq[JointDoc], maybeWikipediaInterface: Option[WikipediaInterface], doConllPostprocessing: Boolean) {
     decodeWriteOutputMaybeEvaluate(jointTestDocs, maybeWikipediaInterface, doConllPostprocessing, false);
@@ -38,7 +50,7 @@ class JointPredictor(val jointFeaturizer: JointFeaturizerShared[NerFeaturizer],
   def decodeWriteOutputEvaluate(jointTestDocs: Seq[JointDoc], maybeWikipediaInterface: Option[WikipediaInterface], doConllPostprocessing: Boolean) {
     decodeWriteOutputMaybeEvaluate(jointTestDocs, maybeWikipediaInterface, doConllPostprocessing, true);
   }
-
+  
   private def decodeWriteOutputMaybeEvaluate(jointTestDocs: Seq[JointDoc], maybeWikipediaInterface: Option[WikipediaInterface], doConllPostprocessing: Boolean, evaluate: Boolean) {
     val fgfOnto = new FactorGraphFactoryOnto(jointFeaturizer, maybeWikipediaInterface);
     val computer = new JointComputerShared(fgfOnto);
@@ -67,7 +79,7 @@ class JointPredictor(val jointFeaturizer: JointFeaturizerShared[NerFeaturizer],
       NEEvaluator.evaluateOnConll2011(jointTestDocs, predNEChunks, Driver.conll2011Path.split(",").flatMap(path => ConllDocReader.readDocNames(path)).toSet, if (Driver.writeNerOutput) Execution.getFile("ner.txt") else "");
     }
   }
-  
+
   def pack: JointPredictor = {
     if (jointFeaturizer.canReplaceIndexer) {
       val (newIndexer, newWeights) = GUtil.packFeaturesAndWeights(jointFeaturizer.indexer, weights);

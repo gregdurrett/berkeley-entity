@@ -113,6 +113,23 @@ object EntitySystem {
 //    jointDocs;
 //  }
   
+  /**
+   * N.B. Should reflect what happens in preprocessDocsForDecode, just on one doc 
+   */
+  def preprocessDocForDecode(conllDoc: ConllDoc,
+                             mentionPropertyComputer: MentionPropertyComputer,
+                             nerPruner: NerPruner,
+                             corefPruner: CorefPruner) = {
+    val assembler = CorefDocAssembler(Driver.lang, Driver.useGoldMentions);
+    val corefDoc = assembler.createCorefDoc(conllDoc, mentionPropertyComputer)
+    val docGraph = new DocumentGraph(corefDoc, false)
+    preprocessDocsCacheResources(Seq(docGraph))
+    corefPruner.prune(docGraph)
+    val jointDoc = JointDoc.assembleJointDoc(docGraph, None)
+    jointDoc.cacheNerPruner(Some(nerPruner))
+    jointDoc
+  }
+  
   def preprocessDocsForTrain(path: String,
                              size: Int,
                              mentionPropertyComputer: MentionPropertyComputer,
@@ -182,8 +199,18 @@ object EntitySystem {
     val numberGenderComputer = NumberGenderComputer.readBergsmaLinData(Driver.numberGenderDataPath);
     val mentionPropertyComputer = new MentionPropertyComputer(Some(numberGenderComputer));
     val maybeWikipediaInterface: Option[WikipediaInterface] = if (Driver.wikipediaPath != "") Some(GUtil.load(Driver.wikipediaPath).asInstanceOf[WikipediaInterface]) else None;
-    val jointDocs = preprocessDocsForDecode(path, size, Driver.docSuffix, mentionPropertyComputer, jointPredictor.nerPruner, jointPredictor.corefPruner);
-    jointPredictor.decodeWriteOutput(jointDocs, maybeWikipediaInterface, Driver.doConllPostprocessing);
+//    val jointDocs = preprocessDocsForDecode(path, size, Driver.docSuffix, mentionPropertyComputer, jointPredictor.nerPruner, jointPredictor.corefPruner);
+//    jointPredictor.decodeWriteOutput(jointDocs, maybeWikipediaInterface, Driver.doConllPostprocessing);
+    val outWriter = IOUtils.openOutHard(Execution.getFile("output.conll"))
+    val outWikiWriter = IOUtils.openOutHard(Execution.getFile("output-wiki.conll"))
+    val predictor = jointPredictor.makeIndividualDocPredictionWriter(maybeWikipediaInterface, outWriter, outWikiWriter)
+    val predictionWriter = (doc: ConllDoc) => {
+      val jointDoc = preprocessDocForDecode(doc, mentionPropertyComputer, jointPredictor.nerPruner, jointPredictor.corefPruner)
+      predictor(jointDoc)
+    }
+    ConllDocReader.loadRawConllDocsWithSuffixProcessStreaming(path, size, Driver.docSuffix, predictionWriter)
+    outWriter.close
+    outWikiWriter.close
   }
   
   def runOntoPredictEvaluate(path: String, size: Int, modelPath: String) {
