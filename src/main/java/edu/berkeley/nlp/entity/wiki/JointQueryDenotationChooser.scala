@@ -29,6 +29,8 @@ case class JointQueryDenotationExample(val queries: Seq[Query],
   // Feature caches since feature computation is expensive if redone every time
   var cachedFeatsEachQuery: Array[Array[Int]] = null;
   var cachedFeatsEachQueryDenotation: Array[Array[Array[Int]]] = null;
+
+  def document = queries.head.originalMent.rawDoc
 }
 
 /**
@@ -43,6 +45,8 @@ class JointQueryDenotationChoiceComputer(val wikiDB: WikipediaInterface,
 
   def featurizeUseCache(ex: JointQueryDenotationExample, addToIndexer: Boolean) {
     if (ex.cachedFeatsEachQuery == null) {
+      if(ex.document.documentVectorCache == null)
+        ex.document.documentVectorCache = wikiDB.textDB.makeVector(ex.document.words)
       ex.cachedFeatsEachQuery = queryChooser.featurizeQueries(ex.queries, addToIndexer)
       ex.cachedFeatsEachQueryDenotation = queryChooser.featurizeQueriesAndDenotations_GLOW(ex.queries, ex.allDenotations, addToIndexer, wikiDB)
     }

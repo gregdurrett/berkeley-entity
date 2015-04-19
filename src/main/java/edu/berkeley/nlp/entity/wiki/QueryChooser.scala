@@ -234,9 +234,9 @@ class QueryChoiceComputer(val wikiDB: WikipediaInterface,
     val queryNonemptyList = queryOutcomes.map(_.isEmpty);
     val ment = queries.head.originalMent;
     val mentUpToHeadSize = ment.headIdx - ment.startIdx + 1;
-    val (refLinksIn, refLinksOut) = getDentationLinksSets(denotations, wikiDB)
+    /*val (refLinksIn, refLinksOut) = getDentationLinksSets(denotations, wikiDB)
 
-    /*val PMINGDvals = Seq(
+    val PMINGDvals = Seq(
       GLOWfeatures[Int](PMI, refLinksIn, "PMI-in-"),
       GLOWfeatures[Int](NGD, refLinksIn, "NGD-in-"),
       GLOWfeatures[Int](PMI, refLinksOut, "PMI-out-"),
@@ -251,8 +251,9 @@ class QueryChoiceComputer(val wikiDB: WikipediaInterface,
     // in the wikification paper they have something that is choosing the references together
     // need to look at pairs of references and
 
-
-
+    val denotationSim = denotations.map(t => wikiDB.textDB.compareDocumentC(ment.rawDoc.documentVectorCache, t))
+    val denotationSimMax = denotationSim.max
+    val denotationSimAvg = denotationSim.sum / denotationSim.size
 
     // TODO: implement the local vector features which compare the text of the pages
     // the context can be the set of items linking into/outof a page? but then that isn't the similarity
@@ -287,6 +288,10 @@ class QueryChoiceComputer(val wikiDB: WikipediaInterface,
         if (denotationHasParenthetical) {
           feat("MatchesQueryUpToParen=" + queryDescriptorWithProper + "-" + (den.substring(0, den.indexOf("(")).trim.toLowerCase == queryStr.toLowerCase))
         }
+        feat("CompariableWordsLog="+Math.floor(Math.log(denotationSim(denIdx))))
+        feat("CompariableIsMaxWordSim=" + (denotationSim(denIdx) == denotationSimMax))
+        feat("CompariableWordsAboveAvg=" + (denotationSim(denIdx) > denotationSimAvg))
+        feat("CompariableWordsReweight="+Math.floor(denotationSim(denIdx) / denotationSimMax * 10))
       } else {
         feat("Impossible");
       }

@@ -31,4 +31,6 @@ trait Document {
   def isConversation : Boolean = false
 
   def getCorrespondingNERChunk (sentIdx : Int, headIdx : Int) : Option[Chunk[String]]
+
+  var documentVectorCache: Array[Int] = null
 }

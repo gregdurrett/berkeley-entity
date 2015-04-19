@@ -17,6 +17,38 @@ import scala.collection.mutable
 @SerialVersionUID(1L)
 class WikipediaTextDB (val indexer: Indexer[String], val words: mutable.HashMap[String, Array[Int]]) extends Serializable {
 
+  def getDocument(title: String) = words.getOrElse(title, Array[Int]())
+
+  def compareVectors(a: Array[Int], b: Array[Int]) = {
+    var ai = 0
+    var bi = 0
+    var simcnt = 0
+    while(ai < a.size && bi < b.size) {
+      if(a(ai) == b(bi)) {
+        simcnt += 1
+        ai += 1
+        bi += 1
+      } else if(a(ai) > b(bi)) {
+        bi += 1
+      } else {
+        ai += 1
+      }
+    }
+    simcnt
+  }
+
+  def compareTitles(atitle: String, btitle: String) = compareVectors(getDocument(atitle), getDocument(btitle))
+
+  def makeVector(document: Seq[Seq[String]]) = {
+    document.flatMap(_.map(v => indexer.indexOf(v.toLowerCase))).toSet.filter(_ != -1).toArray.sorted
+  }
+
+  def compareDocument(doc: Array[Int], title: String) = compareVectors(doc, getDocument(title))
+
+  def compareDocumentC(doc: Array[Int], title: String) = {
+    val tdoc = getDocument(title)
+    compareVectors(doc, tdoc).asInstanceOf[Double] / (doc.size * tdoc.size)
+  }
 
 }
 
@@ -73,7 +105,7 @@ object WikipediaTextDB {
           }
           // TODO: maybe toSet
           document.toString.split("[^A-Za-z]").foreach(w => {
-            val i = indexer.getIndex(w)
+            val i = indexer.getIndex(w.toLowerCase)
             totalWordCounts.incrementCount(i, 1.0)
             currentWordCounts += i
             //currentWordCounts.incrementCount(i, 1.0)
