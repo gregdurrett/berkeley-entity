@@ -38,9 +38,9 @@ class ConllDocReader(val lang: Language,
     case _ => throw new RuntimeException("Bad language, no head finder for " + lang);
   }
   
-  def readConllDocs(fileName: String): Seq[ConllDoc] = {
+  def readConllDocs(fileName: String, numDocsToStopAfter: Int = -1): Seq[ConllDoc] = {
     val fcn = (docID: String, docPartNo: Int, docBySentencesByLines: ArrayBuffer[ArrayBuffer[String]]) => assembleConllDoc(docBySentencesByLines, docID, docPartNo);
-    ConllDocReader.readConllDocsGeneral(fileName, fcn);
+    ConllDocReader.readConllDocsGeneral(fileName, fcn, numDocsToStopAfter);
   }
   
   def assembleConllDoc(docBySentencesByLines: ArrayBuffer[ArrayBuffer[String]],
@@ -160,14 +160,15 @@ object ConllDocReader {
     ConllDocReader.readConllDocsGeneral(fileName, fcn).toArray;
   }
   
-  def readConllDocsGeneral[T](fileName: String, fcn: (String, Int, ArrayBuffer[ArrayBuffer[String]]) => T): Seq[T] = {
+  def readConllDocsGeneral[T](fileName: String, fcn: (String, Int, ArrayBuffer[ArrayBuffer[String]]) => T, numDocsToStopAfter: Int = -1): Seq[T] = {
     val results = new ArrayBuffer[T];
     val lineItr = IOUtils.lineIterator(IOUtils.openInHard(fileName));
+    var docsProcessed = 0
     var docBySentencesByLines = new ArrayBuffer[ArrayBuffer[String]];
     var docID = "";
     var docPartNo = -1;
     // Split documents up into parts and sentences
-    while (lineItr.hasNext) {
+    while (lineItr.hasNext && (numDocsToStopAfter == -1 || docsProcessed < numDocsToStopAfter)) {
       val line = lineItr.next
       if (line.startsWith("#begin document")) {
         val thisLineDocID = line.substring(line.indexOf("(") + 1, line.indexOf(")"));
@@ -178,6 +179,7 @@ object ConllDocReader {
         } else {
           // We just changed docIDs; flush the document
           results += fcn(docID, docPartNo, docBySentencesByLines);
+          docsProcessed += 1
           docBySentencesByLines = new ArrayBuffer[ArrayBuffer[String]];
           docID = thisLineDocID;
           docPartNo = thisLinePartNo;
@@ -193,6 +195,7 @@ object ConllDocReader {
       }
     }
     results += fcn(docID, docPartNo, docBySentencesByLines);
+    docsProcessed += 1
     results
   }
   
@@ -348,7 +351,8 @@ object ConllDocReader {
     var docCounter = 0;
     var fileIdx = 0;
     while (fileIdx < files.size && (size == -1 || docCounter < size)) {
-      val newDocs = reader.readConllDocs(files(fileIdx).getAbsolutePath);
+      val numDocsRemaining = if (size == -1) Integer.MAX_VALUE else size - docCounter
+      val newDocs = reader.readConllDocs(files(fileIdx).getAbsolutePath, numDocsRemaining);
       docs ++= newDocs;
       docCounter += newDocs.size
       fileIdx += 1;
@@ -372,7 +376,7 @@ object ConllDocReader {
     var docCounter = 0;
     var fileIdx = 0;
     while (fileIdx < files.size && (size == -1 || docCounter < size)) {
-      var numDocsRemaining = if (size == -1) Integer.MAX_VALUE else size - docCounter
+      val numDocsRemaining = if (size == -1) Integer.MAX_VALUE else size - docCounter
       val numDocsProcessed = reader.readConllDocsProcessStreaming(files(fileIdx).getAbsolutePath, fcn, numDocsRemaining)
       docCounter += numDocsProcessed
       fileIdx += 1;
