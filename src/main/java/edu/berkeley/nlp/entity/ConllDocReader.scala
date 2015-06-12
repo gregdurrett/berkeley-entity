@@ -357,7 +357,7 @@ object ConllDocReader {
       docCounter += newDocs.size
       fileIdx += 1;
     }
-    val numDocs = if (size == -1) docs.size else Math.min(size, files.size);
+    val numDocs = if (size == -1) docs.size else Math.min(size, docs.size);
     Logger.logss(docs.size + " docs loaded from " + fileIdx + " files, retaining " + numDocs);
     if (docs.size == 0) {
       Logger.logss("WARNING: Zero docs loaded...double check your paths unless you meant for this happen");
