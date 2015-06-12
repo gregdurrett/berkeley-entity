@@ -70,7 +70,7 @@ public class NerDriver implements Runnable {
   public static int batchSize = 100;
   
   @Option(gloss = "Feature set")
-  public static String featureSet = "";
+  public static String featureSet = "bigrams+brown";
   @Option(gloss = "Unigram cutoff threshold")
   public static int unigramThreshold = 1;
   @Option(gloss = "Bigram cutoff threshold")
