@@ -34,7 +34,8 @@ class GeneralTrainer[T] {
                    eta: Float,
                    lambda: Float,
                    batchSize: Int,
-                   numItrs: Int): Array[Float] = {
+                   numItrs: Int,
+                   learningCallback: Array[Float] => Unit = (weights: Array[Float]) => {}): Array[Float] = {
 //    val weights = Array.fill(pairwiseIndexingFeaturizer.featureIndexer.size)(0.0);
     val weights = Array.fill(numFeats)(0.0F);
     val reusableGradientArray = Array.fill(numFeats)(0.0F);
@@ -59,7 +60,7 @@ class GeneralTrainer[T] {
                            diagGt,
                            eta,
                            lambda);
-//        }
+        learningCallback(weights)
         currIdx += batchSize;
         currBatchIdx += 1;
       }

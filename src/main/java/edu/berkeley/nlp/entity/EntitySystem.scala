@@ -239,7 +239,7 @@ object EntitySystem {
     val featureIndexer = new Indexer[String];
     val maybeBrownClusters = if (Driver.brownPath != "") Some(BrownClusterInterface.loadBrownClusters(Driver.brownPath, 0)) else None
     val nerFeaturizer = NerFeaturizer(Driver.nerFeatureSet.split("\\+").toSet, featureIndexer, NerSystemLabeled.StdLabelIndexer, jointDocs.flatMap(_.rawDoc.words), None, maybeBrownClusters);
-    val jointFeaturizer = buildFeaturizerShared(jointDocs.map(_.docGraph.corefDoc), featureIndexer, nerFeaturizer, maybeBrownClusters);
+    val jointFeaturizer = buildFeaturizerShared(jointDocs.map(_.docGraph.corefDoc), featureIndexer, Driver.pairwiseFeats, nerFeaturizer, maybeBrownClusters, Driver.corefNerFeatures, Driver.corefWikiFeatures, Driver.wikiNerFeatures);
     val maybeWikipediaInterface: Option[WikipediaInterface] = if (Driver.wikipediaPath != "") Some(GUtil.load(Driver.wikipediaPath).asInstanceOf[WikipediaInterface]) else None;
     
     
@@ -365,7 +365,7 @@ object EntitySystem {
     val featureIndexer = new Indexer[String]();
     val maybeBrownClusters = if (Driver.brownPath != "") Some(BrownClusterInterface.loadBrownClusters(Driver.brownPath, 0)) else None
     val nerFeaturizer = MCNerFeaturizer(Driver.nerFeatureSet.split("\\+").toSet, featureIndexer, MCNerFeaturizer.StdLabelIndexer, jointDocs.flatMap(_.rawDoc.words), None, maybeBrownClusters)
-    val jointFeaturizer = buildFeaturizerShared(jointDocs.map(_.docGraph.corefDoc), featureIndexer, nerFeaturizer, maybeBrownClusters);
+    val jointFeaturizer = buildFeaturizerShared(jointDocs.map(_.docGraph.corefDoc), featureIndexer, Driver.pairwiseFeats, nerFeaturizer, maybeBrownClusters, Driver.corefNerFeatures, Driver.corefWikiFeatures, Driver.wikiNerFeatures);
     val maybeWikipediaInterface: Option[WikipediaInterface] = if (Driver.wikipediaPath != "") Some(GUtil.load(Driver.wikipediaPath).asInstanceOf[WikipediaInterface]) else None;
     
     ///////////////////////
@@ -391,13 +391,106 @@ object EntitySystem {
     model.decodeWriteOutputEvaluate(jointDevDocs, maybeWikipediaInterface, Driver.doConllPostprocessing, wikiLabelsInTrain)
   }
   
-  def buildFeaturizerShared[T](trainDocs: Seq[CorefDoc], featureIndexer: Indexer[String], nerFeaturizer: T, maybeBrownClusters: Option[Map[String,String]]) = {
+  def buildFeaturizerShared[T](trainDocs: Seq[CorefDoc],
+                               featureIndexer: Indexer[String],
+                               corefFeatStr: String,
+                               nerFeaturizer: T,
+                               maybeBrownClusters: Option[Map[String,String]],
+                               corefNerFeatures: String,
+                               corefWikiFeatures: String,
+                               wikiNerFeatures: String) = {
     featureIndexer.getIndex(PairwiseIndexingFeaturizerJoint.UnkFeatName);
     val queryCounts: Option[QueryCountsBundle] = None;
     val lexicalCounts = LexicalCountsBundle.countLexicalItems(trainDocs, Driver.lexicalFeatCutoff);
     val semClasser: Option[SemClasser] = Some(new BasicWordNetSemClasser);
-    val corefFeatureSetSpec = FeatureSetSpecification(Driver.pairwiseFeats, Driver.conjScheme, Driver.conjFeats, Driver.conjMentionTypes, Driver.conjTemplates);
+    val corefFeatureSetSpec = FeatureSetSpecification(corefFeatStr, Driver.conjScheme, Driver.conjFeats, Driver.conjMentionTypes, Driver.conjTemplates);
     val corefFeaturizer = new PairwiseIndexingFeaturizerJoint(featureIndexer, corefFeatureSetSpec, lexicalCounts, queryCounts, semClasser);
-    new JointFeaturizerShared[T](corefFeaturizer, nerFeaturizer, maybeBrownClusters, Driver.corefNerFeatures, Driver.corefWikiFeatures, Driver.wikiNerFeatures, featureIndexer)
+    new JointFeaturizerShared[T](corefFeaturizer, nerFeaturizer, maybeBrownClusters, corefNerFeatures, corefWikiFeatures, wikiNerFeatures, featureIndexer)
+  }
+  
+  ///////////////////////////
+  // JOINT INFERENCE STUFF //
+  ///////////////////////////
+  
+  // Train the independent model then train a joint model where after every iteration the features all get railed to the
+  // values from the independent model; this is basically only learning the joint factors jointly and can be seen
+  // as more or less only doing "joint inference."
+  def runTrainEvaluateACEJointInf(trainPath: String, trainSize: Int, testPath: String, testSize: Int) = {
+    // Resources needed for document assembly: number/gender computer, NER marginals, coref models and mapping of documents to folds
+    val numberGenderComputer = NumberGenderComputer.readBergsmaLinData(Driver.numberGenderDataPath);
+    val mentionPropertyComputer = new MentionPropertyComputer(Some(numberGenderComputer));
+    
+    // Load coref models
+    val corefPruner = CorefPruner.buildPruner(Driver.pruningStrategy)
+    val jointDocs = preprocessACEDocsForTrainEval(trainPath, trainSize, mentionPropertyComputer, corefPruner, Driver.wikiGoldPath, true);
+    // TODO: Are NER models necessary?
+    
+    ///////////////////////
+    // INDEPENDENT MODEL
+    
+    ///////////////////////
+    // Build the featurizer, which involves building specific featurizers for each task
+    val indepFeatureIndexer = new Indexer[String]();
+    val maybeBrownClusters = if (Driver.brownPath != "") Some(BrownClusterInterface.loadBrownClusters(Driver.brownPath, 0)) else None
+    val indepNerFeaturizer = MCNerFeaturizer(Driver.nerFeatureSet.split("\\+").toSet, indepFeatureIndexer, MCNerFeaturizer.StdLabelIndexer, jointDocs.flatMap(_.rawDoc.words), None, maybeBrownClusters)
+    val indepFeaturizer = buildFeaturizerShared(jointDocs.map(_.docGraph.corefDoc), indepFeatureIndexer, Driver.pairwiseFeats, indepNerFeaturizer, maybeBrownClusters, "", "", "");
+    val maybeWikipediaInterface: Option[WikipediaInterface] = if (Driver.wikipediaPath != "") Some(GUtil.load(Driver.wikipediaPath).asInstanceOf[WikipediaInterface]) else None;
+    
+    ///////////////////////
+    // Cache features
+    val indepFgfAce = new FactorGraphFactoryACE(indepFeaturizer, maybeWikipediaInterface);
+    val indepComputer = new JointComputerShared(indepFgfAce);
+    jointDocs.foreach(jointDoc => {
+      indepFgfAce.getDocFactorGraph(jointDoc, true, true, true, PairwiseLossFunctions(Driver.lossFcn), JointLossFcns.nerLossFcn, JointLossFcns.wikiLossFcn);
+      indepFgfAce.getDocFactorGraph(jointDoc, false, true, true, PairwiseLossFunctions(Driver.lossFcn), JointLossFcns.nerLossFcn, JointLossFcns.wikiLossFcn);
+    });
+    PairwiseIndexingFeaturizer.printFeatureTemplateCounts(indepFeatureIndexer)
+    Logger.logss(indepFeatureIndexer.size + " total features");
+    
+    val indepWeights = new GeneralTrainer[JointDocACE].trainAdagrad(jointDocs, indepComputer, indepFeatureIndexer.size, Driver.eta.toFloat, Driver.reg.toFloat, Driver.batchSize, Driver.numItrs);
+    
+    ///////////////////////
+    // JOINT MODEL
+    Logger.logss("COMPUTED INITIAL WEIGHTS; NOW DOING JOINT PASS")
+    // Mark coref feature caches as dirty so they get cleared; this is because the features are reindexed the second
+    // time around
+    jointDocs.foreach(_.docGraph.cacheEmpty = true)
+    val jointFeatureIndexer = new Indexer[String]();
+    val jointNerFeaturizer = MCNerFeaturizer(Driver.nerFeatureSet.split("\\+").toSet, jointFeatureIndexer, MCNerFeaturizer.StdLabelIndexer, jointDocs.flatMap(_.rawDoc.words), None, maybeBrownClusters)
+    val jointFeaturizer = buildFeaturizerShared(jointDocs.map(_.docGraph.corefDoc), jointFeatureIndexer, Driver.pairwiseFeats, jointNerFeaturizer, maybeBrownClusters, Driver.corefNerFeatures, Driver.corefWikiFeatures, Driver.wikiNerFeatures);
+    
+    val fgfAce = new FactorGraphFactoryACE(jointFeaturizer, maybeWikipediaInterface);
+    val computer = new JointComputerShared(fgfAce);
+    jointDocs.foreach(jointDoc => {
+      fgfAce.getDocFactorGraph(jointDoc, true, true, true, PairwiseLossFunctions(Driver.lossFcn), JointLossFcns.nerLossFcn, JointLossFcns.wikiLossFcn);
+      fgfAce.getDocFactorGraph(jointDoc, false, true, true, PairwiseLossFunctions(Driver.lossFcn), JointLossFcns.nerLossFcn, JointLossFcns.wikiLossFcn);
+    });
+    PairwiseIndexingFeaturizer.printFeatureTemplateCounts(jointFeatureIndexer)
+    Logger.logss(jointFeatureIndexer.size + " total features");
+    
+    // Make the projector
+    val indepFeatureMapping = Array.tabulate(jointFeatureIndexer.size)(i => {
+      indepFeatureIndexer.indexOf(jointFeatureIndexer.getObject(i))
+    })
+    def projector(weights: Array[Float]) = {
+      var i = 0
+      while (i < weights.size) {
+        if (indepFeatureMapping(i) != -1) {
+          weights(i) = indepWeights(indepFeatureMapping(i))
+        }
+        i += 1
+      }
+    }
+    
+    val finalWeights = new GeneralTrainer[JointDocACE].trainAdagrad(jointDocs, computer, jointFeatureIndexer.size, Driver.eta.toFloat, Driver.reg.toFloat, Driver.batchSize, Driver.numItrs, projector);
+    val model = new JointPredictorACE(jointFeaturizer, finalWeights, corefPruner).pack;
+    if (Driver.modelPath != "") GUtil.save(model, Driver.modelPath);
+    
+    ///////////////////////
+    // Evaluation of each part of the model
+    // Build dev docs
+    val jointDevDocs = preprocessACEDocsForTrainEval(testPath, testSize, mentionPropertyComputer, corefPruner, Driver.wikiGoldPath, false);
+    val wikiLabelsInTrain: Set[String] = jointDocs.flatMap(_.goldWikiChunks.flatMap(_.flatMap(_.label)).toSet).toSet;
+    model.decodeWriteOutputEvaluate(jointDevDocs, maybeWikipediaInterface, Driver.doConllPostprocessing, wikiLabelsInTrain)
   }
 }

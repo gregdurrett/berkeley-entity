@@ -152,7 +152,7 @@ as supervision; email me if you are interested in such functionality.
 To train a CoNLL model, run:
 
     java -Xmx47g -jar berkeley-entity-1.0.jar ++config/base.conf -execDir scratch -mode TRAIN_EVALUATE \
-      -trainPath data/conll-2012-en/train -testPath data/conll-2012-en/dev -modelPath models/cached/joint-new-onto.ser.gz \
+      -trainPath data/conll-2012-en/train -testPath data/conll-2012-en/test -modelPath models/joint-new-onto.ser.gz \
       -wikipediaPath models/cached/wiki-db-onto.ser.gz \
       -pruningStrategy build:models/cached/corefpruner-onto.ser.gz:-5:5 \
       -nerPruningStrategy build:models/cached/nerpruner-onto.ser.gz:-9:5 \
@@ -161,8 +161,8 @@ To train a CoNLL model, run:
 To train an ACE model run:
 
     java -Xmx35g -jar berkeley-entity-1.0.jar ++config/base.conf -execDir scratch -mode TRAIN_EVALUATE_ACE \
-      -trainPath data/ace05/train -testPath data/ace05/dev -modelPath models/cached/joint-new-ace.ser.gz \
-      -wikipediaPath models/cached/wiki-db-ace.ser.gz \
+      -trainPath data/ace05/train -testPath data/ace05/test -modelPath models/cached/joint-new-ace.ser.gz \
+      -wikipediaPath models/wiki-db-ace.ser.gz \
       -pruningStrategy build:models/cached/corefpruner-ace.ser.gz:-5:5 \
       -doConllPostprocessing false -useGoldMentions -wikiGoldPath data/ace05/ace05-all-conll-wiki \
       -lossFcn customLoss-1-1-1 \

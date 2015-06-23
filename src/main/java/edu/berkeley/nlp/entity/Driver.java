@@ -284,6 +284,7 @@ public class Driver implements Runnable {
   public static enum Mode {
     PREDICT, PREDICT_EVALUATE, TRAIN_EVALUATE,
     PREDICT_ACE, PREDICT_EVALUATE_ACE, TRAIN_EVALUATE_ACE,
+    TRAIN_EVALUATE_ACE_JOINT_INF,
     COREF_TRAIN, COREF_PREDICT, COREF_TRAIN_EVALUATE, COREF_TRAIN_PREDICT,
     MAKE_MASK_MODELS;
   }
@@ -311,6 +312,8 @@ public class Driver implements Runnable {
       EntitySystem.runACEPredictEvaluate(testPath, testSize, modelPath);
     } else if (mode == Mode.TRAIN_EVALUATE_ACE) {
       EntitySystem.runTrainEvaluateACE(trainPath, trainSize, testPath, testSize);
+    } else if (mode == Mode.TRAIN_EVALUATE_ACE_JOINT_INF) {
+      EntitySystem.runTrainEvaluateACEJointInf(trainPath, trainSize, testPath, testSize);
     } else if (mode == Mode.COREF_PREDICT) {
       CorefSystem.runPredictWriteOutput(testPath, testSize, modelPath, outputPath, doConllPostprocessing);
     } else if (mode == Mode.COREF_TRAIN_EVALUATE) {
