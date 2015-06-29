@@ -293,30 +293,34 @@ object NEEvaluator {
   
   def main(args: Array[String]) {
     LightRunner.initializeOutput(NEEvaluator.getClass);
+    
+    val goldConllPath = args(0)
+    val taggedDataPath = args(1)
+    val goldConllDocs = ConllDocReader.loadRawConllDocsWithSuffix(goldConllPath, -1, "gold_conll");
+    readEvaluateIllinoisNEROutput(taggedDataPath, goldConllDocs.flatMap(_.words), goldConllDocs.flatMap(_.nerChunks));
+    
     // Illinois evaluation
 //    val goldConllDocsDev2011 = CorefSystem.loadRawConllDocs("data/ontonotes-conll/dev", -1, true);
 //    readEvaluateIllinoisNEROutput("data/ner-output/conll-2011-dev.tagged", goldConllDocsDev2011.flatMap(_.words), goldConllDocsDev2011.flatMap(_.nerChunks));
 //    val goldConllDocsTest2011 = CorefSystem.loadRawConllDocs("data/ontonotes-conll/test", -1, true);
 //    readEvaluateIllinoisNEROutput("data/ner-output/conll-2011-test.tagged", goldConllDocsTest2011.flatMap(_.words), goldConllDocsTest2011.flatMap(_.nerChunks));
-      
-    
-    Logger.logss("DEV 2011");
-    val goldConllDocsDev2011 = ConllDocReader.loadRawConllDocsWithSuffix("data/ontonotes-conll/dev", -1, "gold_conll");
-    readEvaluateIllinoisNEROutput("data/ner-output/conll-2011-dev-downloadedmodel.tagged", goldConllDocsDev2011.flatMap(_.words), goldConllDocsDev2011.flatMap(_.nerChunks));
-    readEvaluateIllinoisNEROutput("data/ner-output/conll-2011-dev-retrained.tagged", goldConllDocsDev2011.flatMap(_.words), goldConllDocsDev2011.flatMap(_.nerChunks));
-    Logger.logss("\n\nTEST 2011");
-    val goldConllDocsTest2011 = ConllDocReader.loadRawConllDocsWithSuffix("data/ontonotes-conll/test", -1, "gold_conll");
-    readEvaluateIllinoisNEROutput("data/ner-output/conll-2011-test-downloadedmodel.tagged", goldConllDocsTest2011.flatMap(_.words), goldConllDocsTest2011.flatMap(_.nerChunks));
-    readEvaluateIllinoisNEROutput("data/ner-output/conll-2011-test-retrained.tagged", goldConllDocsTest2011.flatMap(_.words), goldConllDocsTest2011.flatMap(_.nerChunks));
-    
-    Logger.logss("\n\nDEV 2012");
-    val goldConllDocsDev2012 = ConllDocReader.loadRawConllDocsWithSuffix("data/conll-2012-en/dev", -1, "gold_conll");
-    readEvaluateIllinoisNEROutput("data/ner-output/conll-2012-dev-downloadedmodel.tagged", goldConllDocsDev2012.flatMap(_.words), goldConllDocsDev2012.flatMap(_.nerChunks));
-    readEvaluateIllinoisNEROutput("data/ner-output/conll-2012-dev-retrained.tagged", goldConllDocsDev2012.flatMap(_.words), goldConllDocsDev2012.flatMap(_.nerChunks));
-    Logger.logss("\n\nTEST 2012");
-    val goldConllDocsTest2012 = ConllDocReader.loadRawConllDocsWithSuffix("data/ontonotes-conll/test", -1, "gold_conll");
-    readEvaluateIllinoisNEROutput("data/ner-output/conll-2012-test-downloadedmodel.tagged", goldConllDocsTest2012.flatMap(_.words), goldConllDocsTest2012.flatMap(_.nerChunks));
-    readEvaluateIllinoisNEROutput("data/ner-output/conll-2012-test-retrained.tagged", goldConllDocsTest2012.flatMap(_.words), goldConllDocsTest2012.flatMap(_.nerChunks));
+//    Logger.logss("DEV 2011");
+//    val goldConllDocsDev2011 = ConllDocReader.loadRawConllDocsWithSuffix("data/ontonotes-conll/dev", -1, "gold_conll");
+//    readEvaluateIllinoisNEROutput("data/ner-output/conll-2011-dev-downloadedmodel.tagged", goldConllDocsDev2011.flatMap(_.words), goldConllDocsDev2011.flatMap(_.nerChunks));
+//    readEvaluateIllinoisNEROutput("data/ner-output/conll-2011-dev-retrained.tagged", goldConllDocsDev2011.flatMap(_.words), goldConllDocsDev2011.flatMap(_.nerChunks));
+//    Logger.logss("\n\nTEST 2011");
+//    val goldConllDocsTest2011 = ConllDocReader.loadRawConllDocsWithSuffix("data/ontonotes-conll/test", -1, "gold_conll");
+//    readEvaluateIllinoisNEROutput("data/ner-output/conll-2011-test-downloadedmodel.tagged", goldConllDocsTest2011.flatMap(_.words), goldConllDocsTest2011.flatMap(_.nerChunks));
+//    readEvaluateIllinoisNEROutput("data/ner-output/conll-2011-test-retrained.tagged", goldConllDocsTest2011.flatMap(_.words), goldConllDocsTest2011.flatMap(_.nerChunks));
+//    
+//    Logger.logss("\n\nDEV 2012");
+//    val goldConllDocsDev2012 = ConllDocReader.loadRawConllDocsWithSuffix("data/conll-2012-en/dev", -1, "gold_conll");
+//    readEvaluateIllinoisNEROutput("data/ner-output/conll-2012-dev-downloadedmodel.tagged", goldConllDocsDev2012.flatMap(_.words), goldConllDocsDev2012.flatMap(_.nerChunks));
+//    readEvaluateIllinoisNEROutput("data/ner-output/conll-2012-dev-retrained.tagged", goldConllDocsDev2012.flatMap(_.words), goldConllDocsDev2012.flatMap(_.nerChunks));
+//    Logger.logss("\n\nTEST 2012");
+//    val goldConllDocsTest2012 = ConllDocReader.loadRawConllDocsWithSuffix("data/ontonotes-conll/test", -1, "gold_conll");
+//    readEvaluateIllinoisNEROutput("data/ner-output/conll-2012-test-downloadedmodel.tagged", goldConllDocsTest2012.flatMap(_.words), goldConllDocsTest2012.flatMap(_.nerChunks));
+//    readEvaluateIllinoisNEROutput("data/ner-output/conll-2012-test-retrained.tagged", goldConllDocsTest2012.flatMap(_.words), goldConllDocsTest2012.flatMap(_.nerChunks));
     
 //    val docs = CorefSystem.loadCorefDocs("data/conll-2012-en/dev", -1, None, true);
 //    writeIllinoisNEROutput("data/ner-output/test.tagged", docs.flatMap(_.rawDoc.words), docs.flatMap(_.rawDoc.nerChunks));
