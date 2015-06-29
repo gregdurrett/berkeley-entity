@@ -283,8 +283,11 @@ object NerSystemLabeled {
     val testPredChunks = testSequenceExs.map(ex => convertToLabeledChunks(ex.decode(nerSystem.weights).map(labelIndexer.getObject(_))));
     NEEvaluator.evaluateChunksBySent(testGoldChunks, testPredChunks);
     if (NerDriver.outputPath != "") {
-      Logger.logss("Writing output to " + NerDriver.outputPath)
-      NEEvaluator.writeIllinoisNEROutput(NerDriver.outputPath, testExamples.map(_.words), testPredChunks)
+      val predPath = NerDriver.outputPath + "-pred"
+      val goldPath = NerDriver.outputPath + "-gold"
+      Logger.logss("Writing pred output to " + predPath + ", gold output to " + goldPath)
+      NEEvaluator.writeIllinoisNEROutput(predPath, testExamples.map(_.words), testPredChunks)
+      NEEvaluator.writeIllinoisNEROutput(goldPath, testExamples.map(_.words), testGoldChunks)
     }
   }
   
