@@ -41,6 +41,8 @@ public class NerDriver implements Runnable {
   public static int testSize = -1;
   @Option(gloss = "Path to Brown clusters")
   public static String brownClustersPath = "";
+  @Option(gloss = "Path to write evaluation output to")
+  public static String outputPath = "";
   
   @Option(gloss = "Use predicted POS tags")
   public static boolean usePredPos = true;

@@ -281,8 +281,11 @@ object NerSystemLabeled {
     // Decode and check test set accuracy
     val testGoldChunks = testSequenceExs.map(ex => convertToLabeledChunks(ex.goldLabels.map(labelIndexer.getObject(_))));
     val testPredChunks = testSequenceExs.map(ex => convertToLabeledChunks(ex.decode(nerSystem.weights).map(labelIndexer.getObject(_))));
-    
     NEEvaluator.evaluateChunksBySent(testGoldChunks, testPredChunks);
+    if (NerDriver.outputPath != "") {
+      Logger.logss("Writing output to " + NerDriver.outputPath)
+      NEEvaluator.writeIllinoisNEROutput(NerDriver.outputPath, testExamples.map(_.words), testPredChunks)
+    }
   }
   
   def convertToLabeledChunks(labelSeq: Seq[String]): Seq[Chunk[String]] = {
