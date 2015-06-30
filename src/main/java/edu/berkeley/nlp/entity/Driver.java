@@ -115,6 +115,8 @@ public class Driver implements Runnable {
   public static int testSize = -1;
   @Option(gloss = "Suffix to use for documents")
   public static String docSuffix = "";
+  @Option(gloss = "Suffix to use for documents in the coref system; this agrees with the EMNLP 2013 system")
+  public static String corefDocSuffix = "auto_conll";
   @Option(gloss = "File of better train/test parses to use")
   public static String betterParsesFile = "";
 

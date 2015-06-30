@@ -39,6 +39,12 @@ object MentionFilter {
         isReferring(docGraph, idx) && hasReferringAntecedents(docGraph, idx);
   }
   
+  def unaryIsCanonicalHardestReferringCaseNoPruning(docGraph: DocumentGraph, idx: Int) = {
+    val goldAntecedents = docGraph.getGoldAntecedentsNoPruning(idx);
+    goldAntecedents(0) != idx && !hasHeadMatchWithAntecedent(docGraph, idx) && !hasLcHeadContainedWithAntecedent(docGraph, idx) &&
+        isReferring(docGraph, idx) && hasReferringAntecedents(docGraph, idx);
+  }
+  
   def isCanonicalHeadContainedCase(docGraph: DocumentGraph, idx: Int) = {
     val goldAntecedents = docGraph.getGoldAntecedentsUnderCurrentPruning(idx);
     goldAntecedents(0) != idx && !hasHeadMatchWithAntecedent(docGraph, idx) && hasLcHeadContainedWithAntecedent(docGraph, idx) && isReferring(docGraph, idx);

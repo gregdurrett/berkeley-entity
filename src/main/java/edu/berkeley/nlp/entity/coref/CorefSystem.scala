@@ -122,7 +122,7 @@ object CorefSystem {
   def runTrain(trainPath: String, trainSize: Int): PairwiseScorer = {
     val numberGenderComputer = NumberGenderComputer.readBergsmaLinData(Driver.numberGenderDataPath);
     val queryCounts: Option[QueryCountsBundle] = None;
-    val trainDocs = loadCorefDocs(trainPath, trainSize, Driver.docSuffix, Some(numberGenderComputer));
+    val trainDocs = loadCorefDocs(trainPath, trainSize, Driver.corefDocSuffix, Some(numberGenderComputer));
     // Randomize
     val trainDocsReordered = new scala.util.Random(0).shuffle(trainDocs);
     val lexicalCounts = LexicalCountsBundle.countLexicalItems(trainDocs, Driver.lexicalFeatCutoff);
@@ -157,7 +157,7 @@ object CorefSystem {
   
   def prepareTestDocuments(devPath: String, devSize: Int): Seq[DocumentGraph] = {
     val numberGenderComputer = NumberGenderComputer.readBergsmaLinData(Driver.numberGenderDataPath);
-    val devDocs = loadCorefDocs(devPath, devSize, Driver.docSuffix, Some(numberGenderComputer));
+    val devDocs = loadCorefDocs(devPath, devSize, Driver.corefDocSuffix, Some(numberGenderComputer));
     val devDocGraphs = devDocs.map(new DocumentGraph(_, false));
     preprocessDocsCacheResources(devDocGraphs);
     CorefPruner.buildPruner(Driver.pruningStrategy).pruneAll(devDocGraphs);
