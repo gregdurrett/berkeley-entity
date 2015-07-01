@@ -32,7 +32,7 @@ class SentenceSplitter(val featureIndexer: Indexer[String], val weights: Array[D
   def formCanonicalizedParagraphs(lines: Array[String], respectInputLineBreaks: Boolean, respectInputTwoLineBreaks: Boolean) = {
     val rawTextLines = lines.toSeq;
     val canonicalizedParagraphs = if (respectInputLineBreaks) {
-      rawTextLines.map(SentenceSplitter.canonicalizeLine(_));
+      rawTextLines.filter(!_.trim.isEmpty).map(SentenceSplitter.canonicalizeLine(_));
     } else if (respectInputTwoLineBreaks) {
       val currPars = new ArrayBuffer[String]();
       var currLine = new StringBuffer();
