@@ -90,6 +90,8 @@ public class PreprocessingDriver implements Runnable {
   public static boolean respectInputTwoLineBreaks = true;
   @Option(gloss = "Use an alternate tokenizer that may respect the original input a little bit more.")
   public static boolean useAlternateTokenizer = false;
+  @Option(gloss = "Use full filesystem paths as document names rather than just file names")
+  public static boolean useFullPathsAsDocNames = false;
   
   public static enum Mode {
     RAW_TEXT, CONLL_JUST_WORDS, REDO_CONLL;
@@ -141,6 +143,9 @@ public class PreprocessingDriver implements Runnable {
   
   public static void processDocument(SentenceSplitter splitter, CoarseToFineMaxRuleParser parser, CoarseToFineMaxRuleParser backoffParser, NerSystemLabeled nerSystem, String inputPath, String outputPath) {
     String docName = inputPath;
+    if (!useFullPathsAsDocNames && docName.contains("/")) {
+      docName = docName.substring(docName.lastIndexOf("/") + 1);
+    }
     String[] lines = IOUtils.readLinesHard(inputPath).toArray(new String[0]);
     String[] canonicalizedParagraphs = splitter.formCanonicalizedParagraphs(lines, respectInputLineBreaks, respectInputTwoLineBreaks);
     String[] sentences = null;
