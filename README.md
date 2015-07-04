@@ -7,8 +7,7 @@ The Berkeley Entity Resolution System jointly solves the problems of named entit
 
 ##Preamble
 
-The Berkeley Entity Resolution System is a state-of-the-art English coreference
-resolution system described in:
+The Berkeley Entity Resolution System is described in:
 
 "A Joint Model for Entity Analysis: Coreference, Typing, and Linking" Greg Durrett and Dan Klein. TACL 2014.
 
@@ -24,7 +23,7 @@ Questions? Bugs? Email me at gdurrett@eecs.berkeley.edu
 
 ##License
 
-Copyright (c) 2013-2014 Greg Durrett. All Rights Reserved.
+Copyright (c) 2013-2015 Greg Durrett. All Rights Reserved.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
