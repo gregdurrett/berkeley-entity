@@ -482,4 +482,16 @@ object CorefEvaluator {
     val conllStr = new CorefConllScorer(conllEvalScriptPath).renderFinalScore(docGraphs.map(_.corefDoc.rawDoc), pcs, gcs);
     "CoNLL score: " + conllStr;
   }
+  
+  //////////////////////////////
+  // METRIC REIMPLEMENTATIONS //
+  //////////////////////////////
+  
+  def computeMUC(docGraph: DocumentGraph, predClustering: OrderedClustering) {
+    
+  }
+  
+  def computeBCubed {
+    
+  }
 }

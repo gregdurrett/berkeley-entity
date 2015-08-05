@@ -227,6 +227,20 @@ class DocumentGraph(val corefDoc: CorefDoc,
     (featsChart, scoreChart)
   }
   
+  def scoreUseCache(scorer: PairwiseScorer, mentIdx: Int): (Array[Array[Int]], Array[Float]) = {
+    val featsChart = featurizeIndexNonPrunedUseCache(scorer.featurizer)(mentIdx)
+    val scoreVec = cachedScoreMatrix(mentIdx);
+    for (j <- 0 to mentIdx) {
+      if (!prunedEdges(mentIdx)(j)) {
+        require(featsChart(j).size > 0);
+        scoreVec(j) = GUtil.scoreIndexedFeats(featsChart(j), scorer.weights);
+      } else {
+        scoreVec(j) = Float.NegativeInfinity;
+      }
+    }
+    (featsChart, scoreVec)
+  }
+  
   // How does this know whether or not to add features? The private variable addToFeatures...
   // a bit of a hack...
   def featurizeIndexNonPrunedUseCache(featurizer: PairwiseIndexingFeaturizer): Array[Array[Array[Int]]] = {

@@ -198,6 +198,11 @@ public class Driver implements Runnable {
   @Option(gloss = "Cutoff below which lexical features fire POS tags instead")
   public static int lexicalFeatCutoff = 20;
   
+  @Option(gloss = "Path to lexical inference outputs (DB of nom/prop<->nom/prop synonymy)")
+  public static String lexInfPath = "";
+  @Option(gloss = "Use new training scheme")
+  public static boolean alternateTraining = false;
+  
   @Option(gloss = "Analyses to print; see CorefEvaluator for details")
   public static String analysesToPrint = "";
   

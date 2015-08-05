@@ -27,7 +27,8 @@ class PairwiseIndexingFeaturizerJoint(val featureIndexer: Indexer[String],
                                       val featureSet: FeatureSetSpecification,
                                       val lexicalCounts: LexicalCountsBundle,
                                       val queryCounts: Option[QueryCountsBundle],
-                                      val semClasser: Option[SemClasser]) extends PairwiseIndexingFeaturizer with Serializable {
+                                      val semClasser: Option[SemClasser],
+                                      val auxFeaturizers: Seq[AuxiliaryFeaturizer] = Seq[AuxiliaryFeaturizer]()) extends PairwiseIndexingFeaturizer with Serializable {
   import featureSet.featsToUse
   
   def getIndexer = featureIndexer;
@@ -415,6 +416,15 @@ class PairwiseIndexingFeaturizerJoint(val featureIndexer: Indexer[String],
           if (!featsToUse.contains("noscprec")) addFeatureShortcut("PrevPrecedingCurrSC=" + fetchPrecedingWordOrPos(antecedentMent) + "-" + descriptor);
           if (!featsToUse.contains("noscfol")) addFeatureShortcut("PrevFollowingCurrSC=" + fetchFollowingWordOrPos(antecedentMent) + "-" + descriptor);
         }
+      }
+    }
+    /////////////////////////////////////////
+    // FEATURES FROM AUXILIARY FEATURIZERS //
+    /////////////////////////////////////////
+    // Null check is for backwards compatibility with previous serialized objects
+    if (auxFeaturizers != null) {
+      for (featurizer <- auxFeaturizers) {
+        featurizer.featurize(docGraph, currMentIdx, antecedentIdx).foreach(addFeatureShortcut(_))
       }
     }
     ////////////////////////////////////////////////////////////////////////////////////////////////

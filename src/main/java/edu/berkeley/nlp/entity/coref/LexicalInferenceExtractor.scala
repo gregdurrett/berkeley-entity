@@ -98,13 +98,13 @@ object LexicalInferenceExtractor {
     val numberGenderComputer = NumberGenderComputer.readBergsmaLinData(Driver.numberGenderDataPath);
     val corefPruner = CorefPruner.buildPruner("models:models-exper/corefpruner-onto.ser.gz:-2")
     
-    val trainDocs = CorefSystem.loadCorefDocs("../zcc11-new/data/conll-2012-en/train", -1, Driver.corefDocSuffix, Some(numberGenderComputer));
-    val trainDocGraphs = trainDocs.map(new DocumentGraph(_, true));
-    writeExamples(trainDocGraphs, corefPruner, "data/lexinf-train.txt")
+//    val trainDocs = CorefSystem.loadCorefDocs("../zcc11-new/data/conll-2012-en/train", -1, Driver.corefDocSuffix, Some(numberGenderComputer));
+//    val trainDocGraphs = trainDocs.map(new DocumentGraph(_, true));
+//    writeExamples(trainDocGraphs, corefPruner, "data/lexinf-train.txt")
     
-//    val devDocs = CorefSystem.loadCorefDocs("../zcc11-new/data/conll-2012-en/dev", -1, Driver.corefDocSuffix, Some(numberGenderComputer));
-//    val devDocGraphs = devDocs.map(new DocumentGraph(_, true));
-//    writeExamples(devDocGraphs, corefPruner, "data/lexinf-dev.txt")
+    val devDocs = CorefSystem.loadCorefDocs("../zcc11-new/data/conll-2012-en/dev", -1, Driver.corefDocSuffix, Some(numberGenderComputer));
+    val devDocGraphs = devDocs.map(new DocumentGraph(_, true));
+    writeExamples(devDocGraphs, corefPruner, "data/extraction-testing.txt")
 //    
 //    val testDocs = CorefSystem.loadCorefDocs("../zcc11-new/data/conll-2012-en/test", -1, Driver.corefDocSuffix, Some(numberGenderComputer));
 //    val testDocGraphs = testDocs.map(new DocumentGraph(_, true));
