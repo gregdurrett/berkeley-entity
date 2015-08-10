@@ -100,12 +100,8 @@ class DocumentInferencerBasic extends DocumentInferencer {
   }
   
   def viterbiDecode(scoresChart: Array[Array[Float]]) = {
-    val probFcn = (idx: Int) => {
-      val probs = scoresChart(idx);
-      GUtil.expAndNormalizeiHard(probs);
-      probs;
-    }
-    DocumentInferencerBasic.decodeMax(scoresChart.size, probFcn);
+    val scoreFcn = (idx: Int) => scoresChart(idx);
+    DocumentInferencerBasic.decodeMax(scoresChart.size, scoreFcn);
   }
   
   def finishPrintStats() = {}
@@ -113,17 +109,17 @@ class DocumentInferencerBasic extends DocumentInferencer {
 
 object DocumentInferencerBasic {
   
-  def decodeMax(size: Int, probFcn: Int => Array[Float]): Array[Int] = {
+  def decodeMax(size: Int, scoreFcn: Int => Array[Float]): Array[Int] = {
     val backpointers = new Array[Int](size);
     for (i <- 0 until size) {
-      val allProbs = probFcn(i);
+      val allScores = scoreFcn(i);
       var bestIdx = -1;
-      var bestProb = Float.NegativeInfinity;
+      var bestScore = Float.NegativeInfinity;
       for (j <- 0 to i) {
-        val currProb = allProbs(j);
-        if (bestIdx == -1 || currProb > bestProb) {
+        val currScore = allScores(j);
+        if (bestIdx == -1 || currScore > bestScore) {
           bestIdx = j;
-          bestProb = currProb;
+          bestScore = currScore;
         }
       }
       backpointers(i) = bestIdx;

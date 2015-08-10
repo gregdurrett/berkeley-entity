@@ -487,11 +487,222 @@ object CorefEvaluator {
   // METRIC REIMPLEMENTATIONS //
   //////////////////////////////
   
-  def computeMUC(docGraph: DocumentGraph, predClustering: OrderedClustering) {
-    
+//  def computeMUC(docGraph: DocumentGraph, predClustering: OrderedClustering) {
+  
+  def getLosses(doc: CorefDoc, predBackpointers: Array[Int], mucWeight: Double, bcubWeight: Double, prunedEdges: Option[Array[Array[Boolean]]]): Array[Array[Double]] = {
+    // Use all backpointers
+//    val OrderedClustering.createFromBackpointers(backpointers)
+    // N.B. must be done sequentially because predBackpointers gets mutated
+//    val goldClustering = doc.goldClustering.bind(doc.goldMentions, true).toSimple
+//    val origPredClustering = OrderedClustering.createFromBackpointers(predBackpointers).bind(doc.predMentions, true).toSimple
+    val goldClustering = doc.goldClustering.bind(doc.goldMentions, false).toSimple
+    val origPredClustering = OrderedClustering.createFromBackpointers(predBackpointers).bind(doc.predMentions, false).toSimple
+    val goldToPredAlignment = computeMapping(origPredClustering, goldClustering)
+    val predToGoldAlignment = computeMapping(goldClustering, origPredClustering)
+    // These partitions are in terms of response cluster indices
+    val originalMUCGoldPartitions = computeMUCPartitions(goldClustering, origPredClustering, goldToPredAlignment)
+    val originalMucRecNumer = goldClustering.clustering.clusters.map(_.size).foldLeft(0)(_ + _) - originalMUCGoldPartitions.map(_.size).foldLeft(0)(_ + _) -
+                              goldToPredAlignment.filter(_ == -1).size
+    Array.tabulate(doc.predMentions.size)(i => {
+      val oldValue = predBackpointers(i)
+      val results = Array.tabulate(i+1)(j => {
+        if (prunedEdges.isDefined && prunedEdges.get(i)(j)) {
+          Double.NegativeInfinity
+        } else {
+          predBackpointers(i) = j
+          val predClustering = OrderedClustering.createFromBackpointers(predBackpointers).bind(doc.predMentions, false).toSimple
+          val muc = computeMUC(goldClustering, predClustering, goldToPredAlignment, predToGoldAlignment, false)
+          // NEW MUC COMPUTATION
+          // What can change? Partitions involving things aligned to i, j, or oldValue. oldValue may lose a partition.
+          // j may gain a partition. i may gain a partition (break good + add bad), lose a partition (break bad + add good or
+          // singleton), or remain the same (break bad + add bad or break good + add good)
+          /*
+          var mucRecNumer = originalMucRecNumer
+          val mucRecDenom = goldClustering.ments.size - goldClustering.clustering.clusters.size // does not change
+          var mucPrecNumer = 0.0
+          var mucPrecDenom = origPredClustering.ments.size - origPredClustering.clustering.clusters.size
+          if (oldValue != i) {
+            // We broke a link
+            // MUC recall: If corresponding gold mentions are in the same cluster, increases the partition size for that cluster
+            // (decrease the numerator). Otherwise do nothing (the clusters split but each gold cluster still has one represented).
+            if (predToGoldAlignment(oldValue) != -1 && predToGoldAlignment(i) != -1 &&
+                goldClustering.clustering.areInSameCluster(predToGoldAlignment(oldValue), predToGoldAlignment(i))) {
+              Logger.logss("SUBBING 1")
+              mucRecNumer -= 1
+            }
+            // MUC precision
+            // Denominator decreases by 1 because we made a new cluster
+            mucPrecDenom -= 1
+            // --Recompute the two numerator terms by iterating over those clusters
+          }
+          if (j != i) {
+            // Connect up again
+            // MUC recall: If the corresponding gold mentions are in the same cluster, decrease the partition size for that cluster
+            // (increase the numerator). Otherwise do nothing (the clusters merge but each target cluster has one represented).
+            if (predToGoldAlignment(j) != -1 && predToGoldAlignment(i) != -1 &&
+                goldClustering.clustering.areInSameCluster(predToGoldAlignment(j), predToGoldAlignment(i))) {
+              Logger.logss("ADDING 1")
+              mucRecNumer += 1
+            }
+            // MUC precision
+            mucPrecDenom += 1 
+          }
+          val newMucRec = mucRecNumer.toDouble / mucRecDenom.toDouble
+          val newMucPrecisionSS = computeMUCRecallSuffStats(predClustering, goldClustering, predToGoldAlignment)
+          val newMucPrec = newMucPrecisionSS._1.toDouble / newMucPrecisionSS._2.toDouble
+          val newMucF1 =  2.0 * newMucPrec * newMucRec / (newMucPrec + newMucRec)
+          // END NEW MUC COMPUTATION
+          val oldMuc = computeMUC(doc, OrderedClustering.createFromBackpointers(predBackpointers))
+          require(Math.abs(muc - oldMuc) < 1e-5, muc + " " + oldMuc)
+          if (Math.abs(newMucF1 - oldMuc) > 1e-5) {
+            println("OLD MUC SUFF STATS")
+            computeMUC(doc, OrderedClustering.createFromBackpointers(predBackpointers), true)
+            println("NEW MUC SUFF STATS")
+            println("(" + newMucPrecisionSS + " => " + newMucPrec + ", " + (mucRecNumer -> mucRecDenom) + " => " + newMucRec + ") ==> " + newMucF1)
+            println("VALUES: " + oldValue + ", " + j + ", " + i + " ::: " + predToGoldAlignment(oldValue) + ", " + predToGoldAlignment(j) + ", " + predToGoldAlignment(i))
+            println("Original clustering: " + origPredClustering.clustering.clusters.map(_.map(idx => predToGoldAlignment(idx)).filter(_ != -1)))
+            println("Projected clustering: " + predClustering.clustering.clusters.map(_.map(idx => predToGoldAlignment(idx)).filter(_ != -1)))
+            println("Gold clustering: " + goldClustering.clustering.clusters)
+            require(false)
+          }
+          */
+          val bcub = computeBcub(doc, OrderedClustering.createFromBackpointers(predBackpointers))
+//          val bcub = 0
+          muc * mucWeight + bcub * bcubWeight
+        }
+      })
+      predBackpointers(i) = oldValue
+      val bestScore = results(GUtil.argMaxIdx(results))
+      for (j <- 0 until results.size) {
+        // Scale by doc size so it's around the right scale
+        results(j) = (bestScore - results(j)) * doc.predMentions.size
+      }
+//      Logger.logss("Results for " + i + ": " + results.toSeq)
+      results
+    })
   }
   
-  def computeBCubed {
-    
+  // Align target to source
+  def computeMapping(source: OrderedClusteringBoundSimple, target: OrderedClusteringBoundSimple) = {
+    Array.tabulate(target.ments.size)(i => {
+      val targetMent = target.ments(i)
+      val matchingIndices = (0 until source.ments.size).filter(j => {
+        val sourceMent = source.ments(j)
+//        targetMent.sentIdx == sourceMent.sentIdx && targetMent.startIdx == sourceMent.startIdx && targetMent.endIdx == sourceMent.endIdx
+        targetMent == sourceMent
+      })
+      if (matchingIndices.size != 0) {
+        matchingIndices.head
+      } else {
+        -1
+      }
+    });
+  }
+  
+  // MUC
+  
+  def computeMUC(doc: CorefDoc, predClustering: OrderedClustering, verbose: Boolean = false): Double = {
+    val goldClusteringBound = doc.goldClustering.bind(doc.goldMentions, true).toSimple
+    val predClusteringBound = predClustering.bind(doc.predMentions, true).toSimple
+    computeMUC(goldClusteringBound, predClusteringBound, computeMapping(predClusteringBound, goldClusteringBound), computeMapping(goldClusteringBound, predClusteringBound), verbose)
+  }
+  
+  def computeMUCPartitions(goldClustering: OrderedClusteringBoundSimple, predClustering: OrderedClusteringBoundSimple, goldToPredAlignment: Array[Int]): Array[HashSet[Int]] = {
+    val key = goldClustering.clustering
+    val response = predClustering.clustering
+    Array.tabulate(key.clusters.size)(clusterIdx => {
+      val cluster = key.clusters(clusterIdx)
+      // Compute the partition size
+      var partitionSize = 0
+      val responseClustersRepresented = new HashSet[Int]
+      for (goldMentIdx <- cluster) {
+        val alignment = goldToPredAlignment(goldMentIdx)
+        if (alignment == -1) {
+          partitionSize += 1
+        } else {
+          responseClustersRepresented += response.getClusterIdx(alignment)
+        }
+      }
+      responseClustersRepresented
+    })
+  }
+  
+  /**
+   * Computes MUC recall; precision is just this with the roles flipped
+   */
+  def computeMUCRecallSuffStats(goldClustering: OrderedClusteringBoundSimple, predClustering: OrderedClusteringBoundSimple, goldToPredAlignment: Array[Int]): (Int, Int) = {
+    val key = goldClustering.clustering
+    val response = predClustering.clustering
+    val responseClustersRepresented = computeMUCPartitions(goldClustering, predClustering, goldToPredAlignment)
+    var recallNumer = 0
+    for (i <- 0 until key.clusters.size) {
+      recallNumer += key.clusters(i).size - responseClustersRepresented(i).size
+      // Add unmatched mentions
+      for (mentIdx <- key.clusters(i)) {
+        if (goldToPredAlignment(mentIdx) == -1) {
+          recallNumer -= 1
+        }
+      }
+    }
+    val recallDenom = key.clusters.map(_.size - 1).foldLeft(0)(_ + _)
+    recallNumer -> recallDenom
+  }
+  
+  def computeMUC(goldClustering: OrderedClusteringBoundSimple, predClustering: OrderedClusteringBoundSimple, goldToPredAlignment: Array[Int], predToGoldAlignment: Array[Int], verbose: Boolean): Double = {
+    val recallSS = computeMUCRecallSuffStats(goldClustering, predClustering, goldToPredAlignment)
+    val precSS = computeMUCRecallSuffStats(predClustering, goldClustering, predToGoldAlignment)
+    val recall = recallSS._1.toDouble / recallSS._2.toDouble
+    val prec = precSS._1.toDouble / precSS._2.toDouble
+    val f1 = 2.0 * prec * recall / (prec + recall)
+    if (verbose) {
+      println("(" + precSS + " => " + prec + ", " + recallSS + " => " + recall + ") ==> " + f1)
+    }
+    f1
+  }
+  
+  // BCUBED
+  
+  def computeBcub(doc: CorefDoc, predClustering: OrderedClustering): Double = {
+    computeBcub(doc.goldClustering.bind(doc.goldMentions, true).toSimple, predClustering.bind(doc.predMentions, true).toSimple)
+  }
+  
+  def computeBcubRecall(goldClustering: OrderedClusteringBoundSimple, predClustering: OrderedClusteringBoundSimple, goldToPredAlignment: Array[Int]): Double = {
+    val key = goldClustering.clustering
+    val response = predClustering.clustering
+    var recallNumer = 0.0
+    for (keyCluster <- key.clusters) {
+      val projectedToResponse = keyCluster.map(mentIdx => goldToPredAlignment(mentIdx)).filter(_ != -1)
+      val oneOverKeyClusterSize = 1.0/ keyCluster.size.toDouble
+      // If it's unaligned, we don't need to do anything
+      if (projectedToResponse.size != 0) {
+        for (responseCluster <- response.clusters) {
+          val intersectionSize = (responseCluster.toSet & projectedToResponse.toSet).size
+          recallNumer += intersectionSize * intersectionSize.toDouble * oneOverKeyClusterSize
+        }
+      }
+    }
+    val recallDenom = key.clusters.map(_.size).foldLeft(0)(_ + _)
+    val recall = recallNumer / recallDenom.toDouble
+    recall
+  }
+  
+  def computeBcub(goldClustering: OrderedClusteringBoundSimple, predClustering: OrderedClusteringBoundSimple): Double = {
+    val recall = computeBcubRecall(goldClustering, predClustering, computeMapping(predClustering, goldClustering))
+    val prec = computeBcubRecall(predClustering, goldClustering, computeMapping(goldClustering, predClustering))
+    val f1 = 2.0 * prec * recall / (prec + recall)
+//    println(prec + " " + recall + " " + f1)
+    f1
+  }
+  
+  def main(args: Array[String]) {
+    val key = new OrderedClusteringBoundSimple((0 until 7).map(i => (i, 0, 0)),
+                                               OrderedClustering.createFromBackpointers(Array(0, 0, 1, 3, 3, 4, 5)))
+    val response = new OrderedClusteringBoundSimple(Seq(0, 1, 2, 3, 5, 6, 7, 8).map(i => (i, 0, 0)),
+                                                    OrderedClustering.createFromBackpointers(Array(0, 0, 2, 2, 4, 4, 5, 6)))
+    val goldToPredAlignment = computeMapping(response, key)
+    val predToGoldAlignment = computeMapping(key, response)
+    println(computeMUC(key, response, goldToPredAlignment, predToGoldAlignment, true))
+    computeBcub(key, response)
+//    computeBcub(key, response, goldToPredAlignment, predToGoldAlignment)
   }
 }

@@ -47,6 +47,7 @@ import edu.berkeley.nlp.entity.sem.BrownClusterInterface
 import edu.berkeley.nlp.entity.ner.NerPrunerFromMarginals
 import edu.berkeley.nlp.entity.ner.NerPruner
 import edu.berkeley.nlp.entity.joint.JointPredictor
+import edu.berkeley.nlp.entity.GeneralTrainer2
 
 object CorefSystem {
   
@@ -146,13 +147,23 @@ object CorefSystem {
     featurizerTrainer.featurizeBasic(trainDocGraphs, basicFeaturizer);
     PairwiseIndexingFeaturizer.printFeatureTemplateCounts(featureIndexer)
 
-    val weights = if (Driver.alternateTraining) {
+    val weights = if (!Driver.alternateTraining) {
       val basicInferencer = new DocumentInferencerBasic()
       val lossFcnObjFirstPass = PairwiseLossFunctions(Driver.lossFcn);
       featurizerTrainer.train(trainDocGraphs, basicFeaturizer, Driver.eta.toFloat, Driver.reg.toFloat, Driver.batchSize, lossFcnObjFirstPass, Driver.numItrs, basicInferencer);
     } else {
-      
-      Array[Float]()
+      val mentLevelTrainExsRaw = trainDocGraphs.flatMap(docGraph => (0 until docGraph.size).map(i => (docGraph -> i)))
+      val mentLevelTrainExs = new scala.util.Random(0).shuffle(mentLevelTrainExsRaw)
+      Logger.logss("Extracted " + mentLevelTrainExs.size + " mention ranking examples from " + trainDocGraphs.size + " document graphs")
+      val lossFcnObj = if (Driver.lossFcn.startsWith("downstream")) {
+        val (foldMapping, models) = GUtil.load("models-exper/corefpruner-onto.ser.gz").asInstanceOf[(HashMap[UID,Int], ArrayBuffer[PairwiseScorer])];
+        new DownstreamPairwiseLossFunction(Driver.lossFcn, foldMapping, models)
+      } else {
+        new SimplePairwiseLossFunction(PairwiseLossFunctions(Driver.lossFcn))
+      }
+      val computer = new MentionRankingComputer(featureIndexer, basicFeaturizer, lossFcnObj, Driver.doSps)
+      val weightsDouble = new GeneralTrainer2(parallel = false).trainAdagrad(mentLevelTrainExs, computer, Driver.eta, Driver.reg, Driver.batchSize, Driver.numItrs, computer.getInitialWeights(0.0), true)
+      weightsDouble.map(_.toFloat)
     }
     new PairwiseScorer(basicFeaturizer, weights).pack;
   }

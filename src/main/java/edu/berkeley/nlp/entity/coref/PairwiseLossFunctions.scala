@@ -1,6 +1,58 @@
 package edu.berkeley.nlp.entity.coref
 import edu.berkeley.nlp.futile.util.Logger
+import scala.collection.mutable.HashMap
+import scala.collection.mutable.ArrayBuffer
 
+trait PairwiseLossFunction {
+  def loss(doc: CorefDoc, ment: Int, ant: Int): Double;
+  
+  def loss(doc: CorefDoc, ment: Int, prunedEdges: Array[Array[Boolean]]): Array[Double];
+}
+
+class SimplePairwiseLossFunction(lossFcn: (CorefDoc, Int, Int) => Float) extends PairwiseLossFunction {
+  
+  def loss(doc: CorefDoc, ment: Int, ant: Int): Double = lossFcn(doc, ment, ant)
+  
+  def loss(doc: CorefDoc, ment: Int, prunedEdges: Array[Array[Boolean]]): Array[Double] = Array.tabulate(ment+1)(ant => lossFcn(doc, ment, ant).toDouble)
+}
+
+class DownstreamPairwiseLossFunction(spec: String,
+                                     foldMapping: HashMap[UID,Int],
+                                     models: ArrayBuffer[PairwiseScorer]) extends PairwiseLossFunction {
+  val params = spec.split("-");
+  val mucWeight = params(1).toDouble
+  val bcubWeight = params(2).toDouble
+  
+  val inferencer = new DocumentInferencerBasic
+  val cache = new HashMap[UID,Array[Array[Double]]]
+  
+  def loss(doc: CorefDoc, ment: Int, ant: Int): Double = {
+    val uid = doc.rawDoc.uid
+    if (!cache.contains(uid)) {
+      Logger.logss("Caching computation for " + uid)
+      val docGraph = new DocumentGraph(doc, false)
+      val scorerThisFold = models(foldMapping(uid))
+      val backpointers = inferencer.viterbiDecode(docGraph, scorerThisFold)
+      cache.put(doc.rawDoc.uid, CorefEvaluator.getLosses(doc, backpointers, mucWeight, bcubWeight, None))
+    }
+    cache(uid)(ment)(ant)
+  }
+  
+  def loss(doc: CorefDoc, ment: Int, prunedEdges: Array[Array[Boolean]]): Array[Double] = {
+    val uid = doc.rawDoc.uid
+    if (!cache.contains(uid)) {
+      Logger.logss("Caching computation for " + uid)
+      val docGraph = new DocumentGraph(doc, false)
+      val scorerThisFold = models(foldMapping(uid))
+      val backpointers = inferencer.viterbiDecode(docGraph, scorerThisFold)
+      cache.put(doc.rawDoc.uid, CorefEvaluator.getLosses(doc, backpointers, mucWeight, bcubWeight, Some(prunedEdges)))
+    }
+    cache(uid)(ment)
+  }
+}
+
+// This was written a while ago, hence why everything is vals and it's
+// kinda weirdly non-object oriented
 object PairwiseLossFunctions {
   
   val noLoss = (doc: CorefDoc, ment: Int, ant: Int) => 0.0F;
@@ -56,6 +108,8 @@ object PairwiseLossFunctions {
       };
     }
   }
+  
+  
   
   def apply(x: String) = getLossFcn(x);
   

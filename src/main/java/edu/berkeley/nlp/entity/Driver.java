@@ -182,7 +182,7 @@ public class Driver implements Runnable {
   @Option(gloss = "Pruning strategy for coarse pass. No pruning by default")
   public static String pruningStrategy = "distance:10000:5000";
   
-  @Option(gloss = "Features to use; default is SURFACE, write \"+FINAL\" for FINAL")
+  @Option(gloss = "Features to use")
   public static String pairwiseFeats = "FINAL";
   @Option(gloss = "Conjunction features: what bits do we add to each feature?")
   public static ConjFeatures conjFeats = ConjFeatures.TYPE_OR_CANONICAL_PRON;
@@ -202,6 +202,8 @@ public class Driver implements Runnable {
   public static String lexInfPath = "";
   @Option(gloss = "Use new training scheme")
   public static boolean alternateTraining = false;
+  @Option(gloss = "Use stochastic primal subgradient on SVM objective instead of SGD on likelihood")
+  public static boolean doSps = false;
   
   @Option(gloss = "Analyses to print; see CorefEvaluator for details")
   public static String analysesToPrint = "";

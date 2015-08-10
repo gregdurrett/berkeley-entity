@@ -403,6 +403,15 @@ object GUtil {
     }
   }
   
+  def addToGradientDouble(feats: Array[Int], scale: Double, gradient: Array[Double]) {
+    var i = 0;
+    while (i < feats.size) {
+      val feat = feats(i);
+      gradient(feat) += scale;
+      i += 1;
+    }
+  }
+  
   def argMaxIdxFloat(values: Seq[Float]) = {
     var currIdx = 0;
     var maxIdx = 0;
@@ -434,6 +443,16 @@ object GUtil {
   def scoreIndexedFeats(feats: Seq[Int], weights: Array[Float]): Float = {
     var featIdx = 0;
     var featTotal = 0.0F;
+    while (featIdx < feats.size) {
+      featTotal += weights(feats(featIdx));
+      featIdx += 1;
+    }
+    featTotal;
+  }
+  
+  def scoreIndexedFeatsDouble(feats: Seq[Int], weights: Array[Double]): Double = {
+    var featIdx = 0;
+    var featTotal = 0.0;
     while (featIdx < feats.size) {
       featTotal += weights(feats(featIdx));
       featIdx += 1;

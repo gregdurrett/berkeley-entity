@@ -12,4 +12,11 @@ class OrderedClusteringBound(val ments: Seq[Mention],
   def getClusterIdx(ment: Mention) = {
     clustering.getClusterIdx(ments.indexOf(ment));
   }
+  
+  def toSimple = new OrderedClusteringBoundSimple(ments.map(ment => (ment.sentIdx, ment.startIdx, ment.endIdx)), clustering)
+}
+
+class OrderedClusteringBoundSimple(val ments: Seq[(Int,Int,Int)],
+                                   val clustering: OrderedClustering) {
+  
 }

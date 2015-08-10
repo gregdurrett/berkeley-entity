@@ -217,7 +217,6 @@ class DocumentGraph(val corefDoc: CorefDoc,
     for (i <- 0 until corefDoc.numPredMents) {
       for (j <- 0 to i) {
         if (!prunedEdges(i)(j)) {
-          require(featsChart(i)(j).size > 0);
           scoreChart(i)(j) = GUtil.scoreIndexedFeats(featsChart(i)(j), scorer.weights);
         } else {
           scoreChart(i)(j) = Float.NegativeInfinity;
@@ -232,7 +231,6 @@ class DocumentGraph(val corefDoc: CorefDoc,
     val scoreVec = cachedScoreMatrix(mentIdx);
     for (j <- 0 to mentIdx) {
       if (!prunedEdges(mentIdx)(j)) {
-        require(featsChart(j).size > 0);
         scoreVec(j) = GUtil.scoreIndexedFeats(featsChart(j), scorer.weights);
       } else {
         scoreVec(j) = Float.NegativeInfinity;
