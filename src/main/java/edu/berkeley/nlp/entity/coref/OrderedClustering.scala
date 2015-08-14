@@ -2,6 +2,7 @@ package edu.berkeley.nlp.entity.coref
 import scala.collection.mutable.HashMap
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.HashSet
 
 class OrderedClustering(val clusters: Seq[Seq[Int]]) {
   // Elements must be consecutive integers from 0 up to n
@@ -92,5 +93,48 @@ object OrderedClustering {
       }
     }
     new OrderedClustering(clusters);
+  }
+}
+
+class OrderedClusteringFromBackpointers(val backpointers: Seq[Int],
+                                        val oc: OrderedClustering) {
+  val adjacencyMap = new HashMap[Int,ArrayBuffer[Int]]
+  for (i <- 0 until backpointers.size) {
+    adjacencyMap(i) = new ArrayBuffer[Int]
+  }
+  for (i <- 0 until backpointers.size) {
+    if (backpointers(i) != i) {
+      adjacencyMap(i) += backpointers(i)
+      adjacencyMap(backpointers(i)) += i
+    }
+  }
+  
+  def computeFromFrontier(seeds: Set[Int], blocked: Set[Int]) = {
+    var frontier = new HashSet[Int]
+    frontier ++= seeds
+    var newFrontier = new HashSet[Int]
+    val cluster = new HashSet[Int]
+    while ((frontier -- cluster).size > 0) {
+      for (node <- (frontier -- cluster)) {
+        cluster += node
+        newFrontier ++= (adjacencyMap(node) -- blocked)
+      }
+      frontier = newFrontier -- cluster
+    }
+    cluster.toSet
+  }
+  
+  def changeBackpointerGetClusters(i: Int, newBackpointer: Int): (Seq[Int], Seq[Int]) = {
+    // Split the cluster out
+    val (oldAntCluster, partialCurrCluster) = if (backpointers(i) != i) {
+      val oldAnt = backpointers(i)
+      val oldAntAdjacent = adjacencyMap(oldAnt)
+      computeFromFrontier(Set(backpointers(i)), Set(i)) -> computeFromFrontier(Set(i), Set(backpointers(i)))
+    } else {
+      (Seq[Int](), oc.getCluster(i))
+    }
+    
+    val newCurrCluster = if (newBackpointer != i) partialCurrCluster ++ oc.getCluster(newBackpointer) else partialCurrCluster
+    oldAntCluster.toSeq -> newCurrCluster.toSeq
   }
 }
