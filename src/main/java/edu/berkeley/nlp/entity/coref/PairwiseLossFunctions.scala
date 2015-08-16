@@ -2,11 +2,16 @@ package edu.berkeley.nlp.entity.coref
 import edu.berkeley.nlp.futile.util.Logger
 import scala.collection.mutable.HashMap
 import scala.collection.mutable.ArrayBuffer
+import edu.berkeley.nlp.entity.AdagradWeightVector
 
 trait PairwiseLossFunction {
   def loss(doc: CorefDoc, ment: Int, ant: Int): Double;
   
   def loss(doc: CorefDoc, ment: Int, prunedEdges: Array[Array[Boolean]]): Array[Double];
+  
+  def loss(doc: CorefDoc, prunedEdges: Array[Array[Boolean]]): Array[Array[Double]];
+  
+  def lossFromCurrPrediction(doc: CorefDoc, prunedEdges: Array[Array[Boolean]], prediction: Array[Int]): Array[Array[Double]];
 }
 
 class SimplePairwiseLossFunction(lossFcn: (CorefDoc, Int, Int) => Float) extends PairwiseLossFunction {
@@ -14,6 +19,10 @@ class SimplePairwiseLossFunction(lossFcn: (CorefDoc, Int, Int) => Float) extends
   def loss(doc: CorefDoc, ment: Int, ant: Int): Double = lossFcn(doc, ment, ant)
   
   def loss(doc: CorefDoc, ment: Int, prunedEdges: Array[Array[Boolean]]): Array[Double] = Array.tabulate(ment+1)(ant => lossFcn(doc, ment, ant).toDouble)
+  
+  def loss(doc: CorefDoc, prunedEdges: Array[Array[Boolean]]): Array[Array[Double]] = Array.tabulate(doc.predMentions.size)(ment => loss(doc, ment, prunedEdges))
+  
+  def lossFromCurrPrediction(doc: CorefDoc, prunedEdges: Array[Array[Boolean]], prediction: Array[Int]): Array[Array[Double]] = loss(doc, prunedEdges)
 }
 
 class DownstreamPairwiseLossFunction(spec: String,
@@ -48,6 +57,20 @@ class DownstreamPairwiseLossFunction(spec: String,
       cache.put(doc.rawDoc.uid, CorefEvaluator.getLosses(doc, backpointers, mucWeight, bcubWeight, Some(prunedEdges)))
     }
     cache(uid)(ment)
+  }
+  
+  def loss(doc: CorefDoc, prunedEdges: Array[Array[Boolean]]): Array[Array[Double]] = {
+    val uid = doc.rawDoc.uid
+    val docGraph = new DocumentGraph(doc, false)
+    val scorerThisFold = models(foldMapping(uid))
+    val backpointers = inferencer.viterbiDecode(docGraph, scorerThisFold)
+    CorefEvaluator.getLosses(doc, backpointers, mucWeight, bcubWeight, Some(prunedEdges))
+  }
+  
+  def lossFromCurrPrediction(doc: CorefDoc, prunedEdges: Array[Array[Boolean]], prediction: Array[Int]): Array[Array[Double]] = {
+    val uid = doc.rawDoc.uid
+    val docGraph = new DocumentGraph(doc, false)
+    CorefEvaluator.getLosses(doc, prediction, mucWeight, bcubWeight, Some(prunedEdges))
   }
 }
 

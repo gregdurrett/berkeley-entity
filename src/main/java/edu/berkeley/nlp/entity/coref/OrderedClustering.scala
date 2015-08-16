@@ -8,9 +8,12 @@ class OrderedClustering(val clusters: Seq[Seq[Int]]) {
   // Elements must be consecutive integers from 0 up to n
   private val allIndicesSorted = clusters.foldLeft(new ArrayBuffer[Int])(_ ++ _).sorted; 
   require(allIndicesSorted.sameElements((0 until allIndicesSorted.size).toSeq), allIndicesSorted);
+  private val mentionToClusterIdMap = new HashMap[Int,Int];
   private val mentionToClusterMap = new HashMap[Int,Seq[Int]];
-  for (cluster <- clusters) {
+  for (clusterIdx <- 0 until clusters.size) {
+    val cluster = clusters(clusterIdx)
     for (i <- cluster) {
+      mentionToClusterIdMap.put(i, clusterIdx) 
       mentionToClusterMap.put(i, cluster);
     }
   }
@@ -43,17 +46,9 @@ class OrderedClustering(val clusters: Seq[Seq[Int]]) {
     cluster.slice(cluster.indexOf(idx) + 1, cluster.size);
   }
   
+  def getClusterIdxMap = mentionToClusterIdMap
   
-  // Needed for output printing
-  def getClusterIdx(idx: Int) = {
-    var clusterIdx = 0;
-    for (i <- 0 until clusters.size) {
-      if (clusters(i).sameElements(mentionToClusterMap(idx))) {
-        clusterIdx = i;
-      }
-    }
-    clusterIdx;
-  }
+  def getClusterIdx(idx: Int) = mentionToClusterIdMap(idx)
   
   def getSubclustering(mentIdxsToKeep: Seq[Int]): OrderedClustering = {
     val oldIndicesToNewIndicesMap = new HashMap[Int,Int]();

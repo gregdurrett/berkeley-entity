@@ -204,6 +204,8 @@ public class Driver implements Runnable {
   public static boolean alternateTraining = false;
   @Option(gloss = "Use stochastic primal subgradient on SVM objective instead of SGD on likelihood")
   public static boolean doSps = false;
+  @Option(gloss = "Compute the downstream loss approximation using the current weights")
+  public static boolean lossFromCurrWeights = false;
   
   @Option(gloss = "Analyses to print; see CorefEvaluator for details")
   public static String analysesToPrint = "";

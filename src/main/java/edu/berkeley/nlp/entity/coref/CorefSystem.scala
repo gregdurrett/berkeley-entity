@@ -152,18 +152,40 @@ object CorefSystem {
       val lossFcnObjFirstPass = PairwiseLossFunctions(Driver.lossFcn);
       featurizerTrainer.train(trainDocGraphs, basicFeaturizer, Driver.eta.toFloat, Driver.reg.toFloat, Driver.batchSize, lossFcnObjFirstPass, Driver.numItrs, basicInferencer);
     } else {
-      val mentLevelTrainExsRaw = trainDocGraphs.flatMap(docGraph => (0 until docGraph.size).map(i => (docGraph -> i)))
-      val mentLevelTrainExs = new scala.util.Random(0).shuffle(mentLevelTrainExsRaw)
-      Logger.logss("Extracted " + mentLevelTrainExs.size + " mention ranking examples from " + trainDocGraphs.size + " document graphs")
+      // This is mention-by-mention training which doesn't seem to work better and has bad
+      // caching properties for loss functions.
+//      val mentLevelTrainExsRaw = trainDocGraphs.flatMap(docGraph => (0 until docGraph.size).map(i => (docGraph -> i)))
+//      val mentLevelTrainExs = new scala.util.Random(0).shuffle(mentLevelTrainExsRaw)
+//      Logger.logss("Extracted " + mentLevelTrainExs.size + " mention ranking examples from " + trainDocGraphs.size + " document graphs")
+//      val lossFcnObj = if (Driver.lossFcn.startsWith("downstream")) {
+//        val (foldMapping, models) = GUtil.load("models-exper/corefpruner-onto.ser.gz").asInstanceOf[(HashMap[UID,Int], ArrayBuffer[PairwiseScorer])];
+//        new DownstreamPairwiseLossFunction(Driver.lossFcn, foldMapping, models)
+//      } else {
+//        new SimplePairwiseLossFunction(PairwiseLossFunctions(Driver.lossFcn))
+//      }
+////      val computer = new MentionRankingComputer(featureIndexer, basicFeaturizer, lossFcnObj, Driver.doSps)
+////      val weightsDouble = new GeneralTrainer2(parallel = false).trainAdagrad(mentLevelTrainExs, computer, Driver.eta, Driver.reg, Driver.batchSize, Driver.numItrs, computer.getInitialWeights(0.0), true)
+//      val computer = new MentionRankingComputerSparse(featureIndexer, basicFeaturizer, lossFcnObj, Driver.doSps)
+//      val weightsDouble = new GeneralTrainer2(parallel = false).trainAdagradSparse(mentLevelTrainExs, computer, Driver.eta, Driver.reg, Driver.batchSize, Driver.numItrs, computer.getInitialWeights(0.0), true)
+//      weightsDouble.map(_.toFloat)
+      // Document-by-document training
       val lossFcnObj = if (Driver.lossFcn.startsWith("downstream")) {
         val (foldMapping, models) = GUtil.load("models-exper/corefpruner-onto.ser.gz").asInstanceOf[(HashMap[UID,Int], ArrayBuffer[PairwiseScorer])];
         new DownstreamPairwiseLossFunction(Driver.lossFcn, foldMapping, models)
       } else {
         new SimplePairwiseLossFunction(PairwiseLossFunctions(Driver.lossFcn))
       }
-      val computer = new MentionRankingComputer(featureIndexer, basicFeaturizer, lossFcnObj, Driver.doSps)
-      val weightsDouble = new GeneralTrainer2(parallel = false).trainAdagrad(mentLevelTrainExs, computer, Driver.eta, Driver.reg, Driver.batchSize, Driver.numItrs, computer.getInitialWeights(0.0), true)
-      weightsDouble.map(_.toFloat)
+      val computer = new MentionRankingDocumentComputer(featureIndexer, basicFeaturizer, lossFcnObj, Driver.doSps, Driver.lossFromCurrWeights)
+      val weightsDouble = new GeneralTrainer2(parallel = false).trainAdagradSparse(trainDocGraphs, computer, Driver.eta, Driver.reg, Driver.batchSize, Driver.numItrs, computer.getInitialWeights(0.0), true)
+      val weights = weightsDouble.map(_.toFloat)
+      // Evaluate on train
+      val scorer = new PairwiseScorer(basicFeaturizer, weights);
+      Logger.logss("EVALUATING ON TRAIN")
+      val basicInferencer = new DocumentInferencerBasic();
+      val (allPredBackptrs, allPredClusterings) = basicInferencer.viterbiDecodeAllFormClusterings(trainDocGraphs, scorer);
+      Logger.logss(CorefEvaluator.evaluateAndRender(trainDocGraphs, allPredBackptrs, allPredClusterings, Driver.conllEvalScriptPath, "TRAIN: ", Driver.analysesToPrint));
+      // End evaluation on train
+      weights
     }
     new PairwiseScorer(basicFeaturizer, weights).pack;
   }
