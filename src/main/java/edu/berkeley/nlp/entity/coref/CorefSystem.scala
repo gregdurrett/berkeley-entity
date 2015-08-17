@@ -175,7 +175,7 @@ object CorefSystem {
       } else {
         new SimplePairwiseLossFunction(PairwiseLossFunctions(Driver.lossFcn))
       }
-      val computer = new MentionRankingDocumentComputer(featureIndexer, basicFeaturizer, lossFcnObj, Driver.doSps, Driver.lossFromCurrWeights)
+      val computer = new MentionRankingDocumentComputer(featureIndexer, basicFeaturizer, lossFcnObj, Driver.doSps, Driver.lossFromCurrWeights, Driver.lossFromGold)
       val weightsDouble = new GeneralTrainer2(parallel = false).trainAdagradSparse(trainDocGraphs, computer, Driver.eta, Driver.reg, Driver.batchSize, Driver.numItrs, computer.getInitialWeights(0.0), true)
       val weights = weightsDouble.map(_.toFloat)
       // Evaluate on train

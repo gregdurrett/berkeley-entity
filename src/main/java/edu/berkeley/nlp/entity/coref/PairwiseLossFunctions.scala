@@ -29,8 +29,12 @@ class DownstreamPairwiseLossFunction(spec: String,
                                      foldMapping: HashMap[UID,Int],
                                      models: ArrayBuffer[PairwiseScorer]) extends PairwiseLossFunction {
   val params = spec.split("-");
-  val mucWeight = params(1).toDouble
-  val bcubWeight = params(2).toDouble
+  val mucPrecWeight = params(1).toDouble
+  val mucRecWeight = params(2).toDouble
+  val mucF1Weight = params(3).toDouble
+  val bcubPrecWeight = params(4).toDouble
+  val bcubRecWeight = params(5).toDouble
+  val bcubF1Weight = params(6).toDouble
   
   val inferencer = new DocumentInferencerBasic
   val cache = new HashMap[UID,Array[Array[Double]]]
@@ -42,7 +46,7 @@ class DownstreamPairwiseLossFunction(spec: String,
       val docGraph = new DocumentGraph(doc, false)
       val scorerThisFold = models(foldMapping(uid))
       val backpointers = inferencer.viterbiDecode(docGraph, scorerThisFold)
-      cache.put(doc.rawDoc.uid, CorefEvaluator.getLosses(doc, backpointers, mucWeight, bcubWeight, None))
+      cache.put(doc.rawDoc.uid, CorefEvaluator.getLosses(doc, backpointers, mucPrecWeight, mucRecWeight, mucF1Weight, bcubPrecWeight, bcubRecWeight, bcubF1Weight, None))
     }
     cache(uid)(ment)(ant)
   }
@@ -54,23 +58,27 @@ class DownstreamPairwiseLossFunction(spec: String,
       val docGraph = new DocumentGraph(doc, false)
       val scorerThisFold = models(foldMapping(uid))
       val backpointers = inferencer.viterbiDecode(docGraph, scorerThisFold)
-      cache.put(doc.rawDoc.uid, CorefEvaluator.getLosses(doc, backpointers, mucWeight, bcubWeight, Some(prunedEdges)))
+      cache.put(doc.rawDoc.uid, CorefEvaluator.getLosses(doc, backpointers, mucPrecWeight, mucRecWeight, mucF1Weight, bcubPrecWeight, bcubRecWeight, bcubF1Weight, Some(prunedEdges)))
     }
     cache(uid)(ment)
   }
   
   def loss(doc: CorefDoc, prunedEdges: Array[Array[Boolean]]): Array[Array[Double]] = {
     val uid = doc.rawDoc.uid
-    val docGraph = new DocumentGraph(doc, false)
-    val scorerThisFold = models(foldMapping(uid))
-    val backpointers = inferencer.viterbiDecode(docGraph, scorerThisFold)
-    CorefEvaluator.getLosses(doc, backpointers, mucWeight, bcubWeight, Some(prunedEdges))
+    if (!cache.contains(uid)) {
+      Logger.logss("Caching computation for " + uid)
+      val docGraph = new DocumentGraph(doc, false)
+      val scorerThisFold = models(foldMapping(uid))
+      val backpointers = inferencer.viterbiDecode(docGraph, scorerThisFold)
+      cache.put(doc.rawDoc.uid, CorefEvaluator.getLosses(doc, backpointers, mucPrecWeight, mucRecWeight, mucF1Weight, bcubPrecWeight, bcubRecWeight, bcubF1Weight, Some(prunedEdges)))
+    }
+    cache(uid)
   }
   
   def lossFromCurrPrediction(doc: CorefDoc, prunedEdges: Array[Array[Boolean]], prediction: Array[Int]): Array[Array[Double]] = {
     val uid = doc.rawDoc.uid
     val docGraph = new DocumentGraph(doc, false)
-    CorefEvaluator.getLosses(doc, prediction, mucWeight, bcubWeight, Some(prunedEdges))
+    CorefEvaluator.getLosses(doc, prediction, mucPrecWeight, mucRecWeight, mucF1Weight, bcubPrecWeight, bcubRecWeight, bcubF1Weight, Some(prunedEdges))
   }
 }
 

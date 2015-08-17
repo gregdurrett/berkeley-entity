@@ -50,6 +50,13 @@ class OrderedClustering(val clusters: Seq[Seq[Int]]) {
   
   def getClusterIdx(idx: Int) = mentionToClusterIdMap(idx)
   
+  def getConsistentBackpointers = {
+    Array.tabulate(allIndicesSorted.size)(i => {
+      val immediateAnt = getImmediateAntecedent(i)
+      if (immediateAnt == -1) i else immediateAnt
+    })
+  }
+  
   def getSubclustering(mentIdxsToKeep: Seq[Int]): OrderedClustering = {
     val oldIndicesToNewIndicesMap = new HashMap[Int,Int]();
     (0 until mentIdxsToKeep.size).map(i => oldIndicesToNewIndicesMap.put(mentIdxsToKeep(i), i));

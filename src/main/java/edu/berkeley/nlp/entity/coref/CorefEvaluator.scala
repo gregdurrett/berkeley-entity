@@ -502,11 +502,16 @@ object CorefEvaluator {
     bcubComputation.f1
   }
   
-  def getLosses(doc: CorefDoc, predBackpointers: Array[Int], mucWeight: Double, bcubWeight: Double, prunedEdges: Option[Array[Array[Boolean]]]): Array[Array[Double]] = {
-    getLossesFast(doc, predBackpointers, mucWeight, bcubWeight, prunedEdges)
+  
+  def getLosses(doc: CorefDoc, predBackpointers: Array[Int], mucPrecWeight: Double, mucRecWeight: Double, mucF1Weight: Double, bcubPrecWeight: Double, bcubRecWeight: Double, bcubF1Weight: Double, prunedEdges: Option[Array[Array[Boolean]]]): Array[Array[Double]] = {
+    getLossesFast(doc, predBackpointers, mucPrecWeight, mucRecWeight, mucF1Weight, bcubPrecWeight, bcubRecWeight, bcubF1Weight, prunedEdges)
   }
   
-  def getLossesFast(doc: CorefDoc, predBackpointers: Array[Int], mucWeight: Double, bcubWeight: Double, prunedEdges: Option[Array[Array[Boolean]]]): Array[Array[Double]] = {
+//  def getLosses(doc: CorefDoc, predBackpointers: Array[Int], mucWeight: Double, bcubWeight: Double, prunedEdges: Option[Array[Array[Boolean]]]): Array[Array[Double]] = {
+//    getLossesFast(doc, predBackpointers, 0, 0, mucWeight, 0, 0, bcubWeight, prunedEdges)
+//  }
+  
+  def getLossesFast(doc: CorefDoc, predBackpointers: Array[Int], mucPrecWeight: Double, mucRecWeight: Double, mucF1Weight: Double, bcubPrecWeight: Double, bcubRecWeight: Double, bcubF1Weight: Double, prunedEdges: Option[Array[Array[Boolean]]]): Array[Array[Double]] = {
     // N.B. must be done sequentially because predBackpointers gets mutated
     val goldClustering = doc.goldClustering.bind(doc.goldMentions, false).toSimple
     val origPredClustering = OrderedClustering.createFromBackpointers(predBackpointers).bind(doc.predMentions, false).toSimple
@@ -543,7 +548,8 @@ object CorefEvaluator {
 //          predBackpointers(i) = oldValue
 //          require(Math.abs(mucComputation.f1 - oldMucComputation.f1) < 1e-5, i + " " + j + " " + oldValue)
 //          require(Math.abs(bcubComputation.f1 - oldBcubComputation.f1) < 1e-5, i + " " + j + " " + oldValue)
-          mucComputation.f1 * mucWeight + bcubComputation.f1 * bcubWeight
+          mucComputation.prec * mucPrecWeight + mucComputation.recall * mucRecWeight + mucComputation.f1 * mucF1Weight +
+              bcubComputation.prec * bcubPrecWeight + bcubComputation.recall * bcubRecWeight + bcubComputation.f1 * bcubF1Weight
         } else {
           // Previous i was in the same cluster as oldValue, but j was in a distinct cluster
           // (due to the "else if" clause above)
@@ -729,7 +735,8 @@ object CorefEvaluator {
 //            Logger.logss("New cluster curr ment: " + newClusterCurrMent)
 //            Logger.logss("---------------------------------------------------")
 //          }
-          mucF1 * mucWeight + bcubF1 * bcubWeight
+          mucPrec * mucPrecWeight + mucRecall * mucRecWeight + mucF1 * mucF1Weight +
+              bcubPrec * bcubPrecWeight + bcubRecall * bcubRecWeight + bcubF1 * bcubF1Weight
         }
       })
       val bestScore = results(GUtil.argMaxIdx(results))
@@ -737,7 +744,16 @@ object CorefEvaluator {
         // Scale by doc size so it's around the right scale
         results(j) = (bestScore - results(j)) * doc.predMentions.size
       }
-//      Logger.logss("Results for " + i + ": " + results.toSeq)
+//      for (j <- 0 until results.size) {
+//        if ((j == i && doc.oraclePredOrderedClustering.startsCluster(i)) || (j != i && doc.oraclePredOrderedClustering.areInSameCluster(i, j))) {
+//          if (!results(j).isInfinite() && results(j) > 1e-5) {
+//            Logger.logss("Nonzero loss for gold mention: " + results(j) + " " + i + " " + j + " " + results.toSeq.filter(!_.isInfinite()) + "; last = " + results.last)
+//          }
+//        }
+//      }
+//      if (i < 10) {
+//        Logger.logss("Results for " + i + ": " + results.toSeq)
+//      }
       results
     })
 //    Logger.logss((System.nanoTime - time)/1000000 + " millis")

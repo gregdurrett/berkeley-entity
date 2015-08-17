@@ -206,6 +206,8 @@ public class Driver implements Runnable {
   public static boolean doSps = false;
   @Option(gloss = "Compute the downstream loss approximation using the current weights")
   public static boolean lossFromCurrWeights = false;
+  @Option(gloss = "Compute the downstream loss approximation using the gold clusters")
+  public static boolean lossFromGold = false;
   
   @Option(gloss = "Analyses to print; see CorefEvaluator for details")
   public static String analysesToPrint = "";

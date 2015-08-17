@@ -12,7 +12,8 @@ class MentionRankingDocumentComputer(val featIdx: Indexer[String],
                                      val featurizer: PairwiseIndexingFeaturizer,
                                      val lossFcn: PairwiseLossFunction,
                                      val doSps: Boolean = false,
-                                     val lossFromCurrWeights: Boolean = false) extends LikelihoodAndGradientComputerSparse[DocumentGraph] {
+                                     val lossFromCurrWeights: Boolean = false,
+                                     val lossFromGold: Boolean = false) extends LikelihoodAndGradientComputerSparse[DocumentGraph] {
 
   def getInitialWeights(initialWeightsScale: Double): Array[Double] = Array.tabulate(featIdx.size)(i => 0.0)
   
@@ -21,6 +22,8 @@ class MentionRankingDocumentComputer(val featIdx: Indexer[String],
     val marginals = docGraph.cachedMarginalMatrix
     val losses = if (lossFromCurrWeights) {
       lossFcn.lossFromCurrPrediction(docGraph.corefDoc, docGraph.prunedEdges, MentionRankingDocumentComputer.viterbiDecode(ex, featurizer, weights))
+    } else if (lossFromGold) {
+      lossFcn.lossFromCurrPrediction(docGraph.corefDoc, docGraph.prunedEdges, ex.corefDoc.oraclePredOrderedClustering.getConsistentBackpointers)
     } else {
       lossFcn.loss(docGraph.corefDoc, docGraph.prunedEdges)
     }
@@ -32,10 +35,8 @@ class MentionRankingDocumentComputer(val featIdx: Indexer[String],
       for (j <- 0 to i) {
         // If this is a legal antecedent
         if (!docGraph.isPruned(i, j) && (!gold || goldAntecedents.contains(j))) {
-          // N.B. Including lossFcn is okay even for gold because it should be zero
           val score = scores(i)(j) + losses(i)(j)
           val unnormalizedProb = Math.exp(score).toFloat
-//          val unnormalizedProb = Math.exp(scores(j) + lossFcn.loss(docGraph.corefDoc, i, j)).toFloat;
           marginals(i)(j) = unnormalizedProb;
           normalizer += unnormalizedProb;
         } else {
@@ -54,6 +55,8 @@ class MentionRankingDocumentComputer(val featIdx: Indexer[String],
     var totalScore = 0.0
     val losses = if (lossFromCurrWeights) {
       lossFcn.lossFromCurrPrediction(docGraph.corefDoc, docGraph.prunedEdges, MentionRankingDocumentComputer.viterbiDecode(ex, featurizer, weights))
+    } else if (lossFromGold) {
+      lossFcn.lossFromCurrPrediction(docGraph.corefDoc, docGraph.prunedEdges, ex.corefDoc.oraclePredOrderedClustering.getConsistentBackpointers)
     } else {
       lossFcn.loss(docGraph.corefDoc, docGraph.prunedEdges)
     }
@@ -164,7 +167,6 @@ object MentionRankingDocumentComputer {
         // If this is a legal antecedent
         if (!docGraph.isPruned(i, j)) {
           val score = scores(i)(j)
-//          val score = scores(j) + lossFcn.loss(docGraph.corefDoc, i, j).toFloat;
           if (bestIdx == -1 || score > bestScore) {
             bestIdx = j
             bestScore = score
