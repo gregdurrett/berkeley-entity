@@ -7,6 +7,7 @@ import edu.berkeley.nlp.futile.util.IntCounter
 import edu.berkeley.nlp.entity.AdagradWeightVector
 import edu.berkeley.nlp.futile.util.Logger
 import edu.berkeley.nlp.entity.GeneralTrainer2
+import edu.berkeley.nlp.futile.math.SloppyMath
 
 class MentionRankingDocumentComputer(val featIdx: Indexer[String],
                                      val featurizer: PairwiseIndexingFeaturizer,
@@ -28,23 +29,49 @@ class MentionRankingDocumentComputer(val featIdx: Indexer[String],
       lossFcn.loss(docGraph.corefDoc, docGraph.prunedEdges)
     }
     for (i <- 0 until docGraph.size) {
-      var normalizer = 0.0F;
       // Restrict to gold antecedents if we're doing gold, but don't load the gold antecedents
       // if we're not.
       val goldAntecedents: Seq[Int] = if (gold) docGraph.getGoldAntecedentsUnderCurrentPruning(i) else null;
+      // NON-LOG VERSION
+//      var normalizer = 0.0F;
+//      for (j <- 0 to i) {
+//        // If this is a legal antecedent
+//        if (!docGraph.isPruned(i, j) && (!gold || goldAntecedents.contains(j))) {
+//          val score = scores(i)(j) + losses(i)(j)
+//          val unnormalizedProb = Math.exp(score).toFloat
+//          marginals(i)(j) = unnormalizedProb;
+//          normalizer += unnormalizedProb;
+//        } else {
+//          marginals(i)(j) = 0.0F;
+//        }
+//      }
+//      var total = 0.0
+//      for (j <- 0 to i) {
+//        marginals(i)(j) /= normalizer;
+//        total += marginals(i)(j)
+//      }
+      // END NON-LOG VERSION
+      // LOG-VERSION
+      // This is as precise as anything using doubles throughout
+      var logNormalizer = Double.NegativeInfinity
       for (j <- 0 to i) {
         // If this is a legal antecedent
         if (!docGraph.isPruned(i, j) && (!gold || goldAntecedents.contains(j))) {
-          val score = scores(i)(j) + losses(i)(j)
-          val unnormalizedProb = Math.exp(score).toFloat
-          marginals(i)(j) = unnormalizedProb;
-          normalizer += unnormalizedProb;
+          val unnormalizedLogProb = scores(i)(j) + losses(i)(j)
+          marginals(i)(j) = unnormalizedLogProb.toFloat;
+          logNormalizer = SloppyMath.logAdd(logNormalizer, unnormalizedLogProb)
         } else {
-          marginals(i)(j) = 0.0F;
+          marginals(i)(j) = Float.NegativeInfinity;
         }
       }
+      var total = 0.0
       for (j <- 0 to i) {
-        marginals(i)(j) /= normalizer;
+        marginals(i)(j) = Math.exp(marginals(i)(j) - logNormalizer).toFloat;
+        total += marginals(i)(j)
+      }
+      // END LOG-VERSION
+      if (Math.abs(total - 1.0) > 0.1) {
+        throw new RuntimeException("Total has diverged; numerical problems! " + total)
       }
     }
     marginals
@@ -89,7 +116,6 @@ class MentionRankingDocumentComputer(val featIdx: Indexer[String],
     if (doSps) {
       val (predMax, predScore) = computeMax(ex, weights, scores, false)
       val (goldMax, goldScore) = computeMax(ex, weights, scores, true)
-      var totalScoreGap = 0.0
       for (i <- 0 until ex.size) {
         if (predMax(i) != goldMax(i)) {
           GeneralTrainer2.addToGradient(featsChart(i)(predMax(i)), -1.0, gradient)

@@ -203,6 +203,10 @@ Linking: ```edu.berkeley.nlp.entity.wiki.QueryChoiceComputer```
 Joint: ```edu.berkeley.nlp.entity.joint.JointFeaturizerShared```, control with
 ```-corefNerFeatures, -wikiNerFeatures, -corefWikiFeatures```
 
+Note that turning off all of the joint features by passing in empty strings
+to each yields the results for independent models (INDEP results from the
+TACL 2014 paper).
+
 The methods to instantiate features are extensible.  Additional information
 sources can either be passed to the featurizers or accessed in a static
 fashion.

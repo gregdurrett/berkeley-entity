@@ -551,11 +551,8 @@ object CorefEvaluator {
           mucComputation.prec * mucPrecWeight + mucComputation.recall * mucRecWeight + mucComputation.f1 * mucF1Weight +
               bcubComputation.prec * bcubPrecWeight + bcubComputation.recall * bcubRecWeight + bcubComputation.f1 * bcubF1Weight
         } else {
-          // Previous i was in the same cluster as oldValue, but j was in a distinct cluster
-          // (due to the "else if" clause above)
           val oldClusterCurrMentIdx = origPredClustering.clustering.getClusterIdx(i)
           val oldClusterTargetMentIdx = origPredClustering.clustering.getClusterIdx(j)
-//          require(oldClusterCurrMentIdx != oldClusterTargetMentIdx)
           // Returns a new cluster for oldValue and a distinct cluster for i and j (which now share a cluster)
           val (newClusterOldAnt, newClusterCurrMent) = origPredClusteringWithBackpointers.changeBackpointerGetClusters(i, j)
 //          Logger.logss("i: " + i + " -- cluster: " + origPredClustering.clustering.clusters(oldClusterCurrMent))
