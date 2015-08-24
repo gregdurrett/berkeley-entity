@@ -13,6 +13,7 @@ class MentionRankingDocumentComputer(val featIdx: Indexer[String],
                                      val featurizer: PairwiseIndexingFeaturizer,
                                      val lossFcn: PairwiseLossFunction,
                                      val doSps: Boolean = false,
+                                     val doMaxTraining: Boolean = false,
                                      val lossFromCurrWeights: Boolean = false,
                                      val lossFromGold: Boolean = false) extends LikelihoodAndGradientComputerSparse[DocumentGraph] {
 
@@ -32,26 +33,6 @@ class MentionRankingDocumentComputer(val featIdx: Indexer[String],
       // Restrict to gold antecedents if we're doing gold, but don't load the gold antecedents
       // if we're not.
       val goldAntecedents: Seq[Int] = if (gold) docGraph.getGoldAntecedentsUnderCurrentPruning(i) else null;
-      // NON-LOG VERSION
-//      var normalizer = 0.0F;
-//      for (j <- 0 to i) {
-//        // If this is a legal antecedent
-//        if (!docGraph.isPruned(i, j) && (!gold || goldAntecedents.contains(j))) {
-//          val score = scores(i)(j) + losses(i)(j)
-//          val unnormalizedProb = Math.exp(score).toFloat
-//          marginals(i)(j) = unnormalizedProb;
-//          normalizer += unnormalizedProb;
-//        } else {
-//          marginals(i)(j) = 0.0F;
-//        }
-//      }
-//      var total = 0.0
-//      for (j <- 0 to i) {
-//        marginals(i)(j) /= normalizer;
-//        total += marginals(i)(j)
-//      }
-      // END NON-LOG VERSION
-      // LOG-VERSION
       // This is as precise as anything using doubles throughout
       var logNormalizer = Double.NegativeInfinity
       for (j <- 0 to i) {
@@ -64,14 +45,25 @@ class MentionRankingDocumentComputer(val featIdx: Indexer[String],
           marginals(i)(j) = Float.NegativeInfinity;
         }
       }
-      var total = 0.0
-      for (j <- 0 to i) {
-        marginals(i)(j) = Math.exp(marginals(i)(j) - logNormalizer).toFloat;
-        total += marginals(i)(j)
-      }
-      // END LOG-VERSION
-      if (Math.abs(total - 1.0) > 0.1) {
-        throw new RuntimeException("Total has diverged; numerical problems! " + total)
+      // Max instead of sum over the latent variables
+      if (gold && doMaxTraining) {
+        val maxMarginalIdx = GUtil.argMaxIdxFloat(marginals(i))
+        for (j <- 0 to i) {
+          if (j != maxMarginalIdx) {
+            marginals(i)(j) = 0.0F
+          } else {
+            marginals(i)(j) = 1.0F
+          }
+        }
+      } else {
+        var total = 0.0
+        for (j <- 0 to i) {
+          marginals(i)(j) = Math.exp(marginals(i)(j) - logNormalizer).toFloat;
+          total += marginals(i)(j)
+        }
+        if (Math.abs(total - 1.0) > 0.1) {
+          throw new RuntimeException("Total has diverged; numerical problems! " + total)
+        }
       }
     }
     marginals
@@ -128,15 +120,18 @@ class MentionRankingDocumentComputer(val featIdx: Indexer[String],
       // both around at the same time
       val predMarginals = computeMarginals(ex, weights, scores, false);
       var totalLogProb = 0.0
+      var totalLogProbMaxing = 0.0
       for (i <- 0 until ex.size) {
         val goldAntecedents = ex.getGoldAntecedentsUnderCurrentPruning(i);
         // Pred terms in gradient and likelihood computation
         var currProb = 0.0
+        var currProbMaxing = 0.0
         for (j <- 0 to i) {
           if (predMarginals(i)(j) > 1e-20) {
             GeneralTrainer2.addToGradient(featsChart(i)(j), -predMarginals(i)(j).toDouble, gradient);
             if (goldAntecedents.contains(j)) {
               currProb += predMarginals(i)(j)
+              currProbMaxing = Math.max(currProbMaxing, predMarginals(i)(j))
             }
           }
         }
@@ -145,6 +140,11 @@ class MentionRankingDocumentComputer(val featIdx: Indexer[String],
           currLogProb = -30;
         }
         totalLogProb += currLogProb
+        var currLogProbMaxing = Math.log(currProbMaxing).toFloat;
+        if (currLogProbMaxing.isInfinite()) {
+          currLogProbMaxing = -30;
+        }
+        totalLogProbMaxing += currLogProbMaxing
       }
       // Gold terms in gradient
       val goldMarginals = computeMarginals(ex, weights, scores, true);
@@ -155,7 +155,7 @@ class MentionRankingDocumentComputer(val featIdx: Indexer[String],
           }
         }
       }
-      totalLogProb
+      if (doMaxTraining) totalLogProbMaxing else totalLogProb
     }
   }
   

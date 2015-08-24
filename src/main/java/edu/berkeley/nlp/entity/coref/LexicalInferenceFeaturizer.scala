@@ -6,8 +6,10 @@ import scala.collection.mutable.HashSet
 import edu.berkeley.nlp.futile.fig.basic.IOUtils
 import edu.berkeley.nlp.futile.util.Logger
 import edu.berkeley.nlp.entity.GUtil
+import scala.collection.mutable.HashMap
 
-class LexicalInferenceFeaturizer(val lexInfDB: HashSet[(String,String)]) extends AuxiliaryFeaturizer {
+class LexicalInferenceFeaturizer(val lexInfDB: HashMap[(String,String),Seq[String]],
+                                 val usePathFeatures: Boolean) extends AuxiliaryFeaturizer {
 
   override def featurize(docGraph: DocumentGraph, currIdx: Int, antecedentIdx: Int): Seq[String] = {
     val feats = new ArrayBuffer[String]
@@ -16,24 +18,42 @@ class LexicalInferenceFeaturizer(val lexInfDB: HashSet[(String,String)]) extends
     if (!curr.mentionType.isClosedClass() && !ant.mentionType.isClosedClass()) {
       val currText = curr.spanToString
       val antText = ant.spanToString
-      feats += (if (lexInfDB.contains(antText -> currText)) "LI=True" else "LI=False")
-      feats += (if (lexInfDB.contains(currText -> antText)) "LIRev=True" else "LIRev=False")
+      val forwardContained = lexInfDB.contains(antText -> currText)
+      feats += "LI=" + forwardContained
+      if (usePathFeatures && forwardContained) {
+        val rels = lexInfDB(antText -> currText)
+        if (!rels.isEmpty) {
+          for (rel <- rels) {
+            feats += "LIPathContains=" + rel
+          }
+        }
+      }
+      val reverseContained = lexInfDB.contains(currText -> antText)
+      feats += "LIRev=" + reverseContained
+      if (usePathFeatures && reverseContained) {
+        val rels = lexInfDB(currText -> antText)
+        if (!rels.isEmpty) {
+          for (rel <- rels) {
+            feats += "LIRevPathContains=" + rel
+          }
+        }
+      }
     }
     feats
   }
 }
 
 object LexicalInferenceFeaturizer {
-  def loadLexInfFeaturizer(lexInfResultsDir: String = "data/lexinf/results/") = {
-    val lexInfDB = new HashSet[(String,String)];
+  def loadLexInfFeaturizer(lexInfResultsDir: String, usePathFeatures: Boolean) = {
+    val lexInfDB = new HashMap[(String,String),Seq[String]];
     addFileToSet(lexInfDB, lexInfResultsDir + "/train.txt")
     addFileToSet(lexInfDB, lexInfResultsDir + "/dev.txt")
     addFileToSet(lexInfDB, lexInfResultsDir + "/test.txt")
     Logger.logss("Loaded " + lexInfDB.size + " true positive lexical inference pairs from " + lexInfResultsDir)
-    new LexicalInferenceFeaturizer(lexInfDB)
+    new LexicalInferenceFeaturizer(lexInfDB, usePathFeatures)
   }
   
-  def addFileToSet(set: HashSet[(String,String)], file: String) {
+  def addFileToSet(map: HashMap[(String,String),Seq[String]], file: String) {
     val lineItr = IOUtils.lineIterator(IOUtils.openInHard(file))
     var corr = 0
     var pred = 0
@@ -49,7 +69,13 @@ object LexicalInferenceFeaturizer {
         if (goldTrue) gold += 1
         if (predTrue) pred += 1
         if (lineSplit(7).toLowerCase().startsWith("t")) {
-          set += (lineSplit(1) -> lineSplit(4))
+          if (lineSplit.size == 9) {
+            // Drop ^ and $
+            val relStr = lineSplit(8).drop(1).dropRight(1)
+            map += (lineSplit(1) -> lineSplit(4)) -> relStr.split("\\s+").toSeq
+          } else {
+            map += (lineSplit(1) -> lineSplit(4)) -> Seq[String]()
+          }
         }
       }
     }

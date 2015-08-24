@@ -52,6 +52,7 @@ import edu.berkeley.nlp.entity.coref.UID
 import edu.berkeley.nlp.entity.wiki._
 import edu.berkeley.nlp.entity.joint.JointPredictorACE
 import edu.berkeley.nlp.entity.coref.CorefSystem
+import edu.berkeley.nlp.entity.coref.AuxiliaryFeaturizer
 
 object EntitySystem {
   
@@ -404,7 +405,7 @@ object EntitySystem {
     val lexicalCounts = LexicalCountsBundle.countLexicalItems(trainDocs, Driver.lexicalFeatCutoff);
     val semClasser: Option[SemClasser] = Some(new BasicWordNetSemClasser);
     val corefFeatureSetSpec = FeatureSetSpecification(corefFeatStr, Driver.conjScheme, Driver.conjFeats, Driver.conjMentionTypes, Driver.conjTemplates);
-    val corefFeaturizer = new PairwiseIndexingFeaturizerJoint(featureIndexer, corefFeatureSetSpec, lexicalCounts, queryCounts, semClasser);
+    val corefFeaturizer = new PairwiseIndexingFeaturizerJoint(featureIndexer, corefFeatureSetSpec, lexicalCounts, queryCounts, semClasser, Seq[AuxiliaryFeaturizer]());
     new JointFeaturizerShared[T](corefFeaturizer, nerFeaturizer, maybeBrownClusters, corefNerFeatures, corefWikiFeatures, wikiNerFeatures, featureIndexer)
   }
   

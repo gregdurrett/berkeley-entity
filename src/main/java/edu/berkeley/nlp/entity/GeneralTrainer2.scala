@@ -63,9 +63,10 @@ trait LikelihoodAndGradientComputerSparse[T] {
   def iterationEndCallback(weights: AdagradWeightVector) = {}
 }
 
+@SerialVersionUID(1L)
 class AdagradWeightVector(val weights: Array[Double],
                           val lambda: Double,
-                          val eta: Double) {
+                          val eta: Double) extends Serializable {
   var nanos = 0L
   val lastIterTouched = Array.tabulate(weights.size)(i => 0)
   var currIter = 0

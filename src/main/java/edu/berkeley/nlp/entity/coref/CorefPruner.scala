@@ -131,7 +131,7 @@ object CorefPruner {
       val featureIndexer = new Indexer[String]();
       featureIndexer.getIndex(PairwiseIndexingFeaturizerJoint.UnkFeatName);
       val featureSetSpec = FeatureSetSpecification(Driver.pairwiseFeats, Driver.conjScheme, Driver.conjFeats, Driver.conjMentionTypes, Driver.conjTemplates);
-      val basicFeaturizer = new PairwiseIndexingFeaturizerJoint(featureIndexer, featureSetSpec, lexicalCounts, queryCounts, Some(new BasicWordNetSemClasser));
+      val basicFeaturizer = new PairwiseIndexingFeaturizerJoint(featureIndexer, featureSetSpec, lexicalCounts, queryCounts, Some(new BasicWordNetSemClasser), Seq[AuxiliaryFeaturizer]());
       val featurizerTrainer = new CorefFeaturizerTrainer();
       featurizerTrainer.featurizeBasic(foldTrainDocGraphs, basicFeaturizer);
       

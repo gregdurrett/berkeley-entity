@@ -204,6 +204,8 @@ public class Driver implements Runnable {
   public static boolean alternateTraining = false;
   @Option(gloss = "Use stochastic primal subgradient on SVM objective instead of SGD on likelihood")
   public static boolean doSps = false;
+  @Option(gloss = "Instead of summing over things in the cluster, max over them (since this is what should happen)")
+  public static boolean doMaxTraining = false;
   @Option(gloss = "Compute the downstream loss approximation using the current weights")
   public static boolean lossFromCurrWeights = false;
   @Option(gloss = "Compute the downstream loss approximation using the gold clusters")

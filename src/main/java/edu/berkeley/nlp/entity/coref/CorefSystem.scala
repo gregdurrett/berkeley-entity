@@ -140,7 +140,7 @@ object CorefSystem {
     val featureSetSpec = FeatureSetSpecification(Driver.pairwiseFeats, Driver.conjScheme, Driver.conjFeats, Driver.conjMentionTypes, Driver.conjTemplates);
     val auxFeaturizers = new ArrayBuffer[AuxiliaryFeaturizer]
     if (featureSetSpec.featsToUse.contains("lexinf")) {
-      auxFeaturizers += LexicalInferenceFeaturizer.loadLexInfFeaturizer(Driver.lexInfPath)
+      auxFeaturizers += LexicalInferenceFeaturizer.loadLexInfFeaturizer(Driver.lexInfPath, Driver.pairwiseFeats.contains("lipath"))
     }
     val basicFeaturizer = new PairwiseIndexingFeaturizerJoint(featureIndexer, featureSetSpec, lexicalCounts, queryCounts, semClasser, auxFeaturizers);
     val featurizerTrainer = new CorefFeaturizerTrainer();
@@ -175,7 +175,7 @@ object CorefSystem {
       } else {
         new SimplePairwiseLossFunction(PairwiseLossFunctions(Driver.lossFcn))
       }
-      val computer = new MentionRankingDocumentComputer(featureIndexer, basicFeaturizer, lossFcnObj, Driver.doSps, Driver.lossFromCurrWeights, Driver.lossFromGold)
+      val computer = new MentionRankingDocumentComputer(featureIndexer, basicFeaturizer, lossFcnObj, Driver.doSps, Driver.doMaxTraining, Driver.lossFromCurrWeights, Driver.lossFromGold)
       val weightsDouble = new GeneralTrainer2(parallel = false).trainAdagradSparse(trainDocGraphs, computer, Driver.eta, Driver.reg, Driver.batchSize, Driver.numItrs, computer.getInitialWeights(0.0), true)
       val weights = weightsDouble.map(_.toFloat)
       // Evaluate on train
@@ -185,6 +185,20 @@ object CorefSystem {
       val (allPredBackptrs, allPredClusterings) = basicInferencer.viterbiDecodeAllFormClusterings(trainDocGraphs, scorer);
       Logger.logss(CorefEvaluator.evaluateAndRender(trainDocGraphs, allPredBackptrs, allPredClusterings, Driver.conllEvalScriptPath, "TRAIN: ", Driver.analysesToPrint));
       // End evaluation on train
+//      if (Driver.pairwiseFeats.contains("lexinf")) {
+//        Logger.logss("Lexinf weights:")
+////        Logger.logss(weights(featureIndexer.getIndex("LI=True")))
+////        Logger.logss(weights(featureIndexer.getIndex("LI=False")))
+////        Logger.logss(weights(featureIndexer.getIndex("LIRev=True")))
+////        Logger.logss(weights(featureIndexer.getIndex("LIRev=False")))
+//        for (feat <- featureIndexer.getObjects().asScala) {
+//          if (feat.startsWith("LI")) {
+//            Logger.logss(feat + ": "+ weights(featureIndexer.getIndex(feat)))
+//            Logger.logss("Zeroing out weight...")
+//            weights(featureIndexer.getIndex(feat)) = 0.0F
+//          }
+//        }
+//      }
       weights
     }
     new PairwiseScorer(basicFeaturizer, weights).pack;
