@@ -172,6 +172,8 @@ object CorefSystem {
       val lossFcnObj = if (Driver.lossFcn.startsWith("downstream")) {
         val (foldMapping, models) = GUtil.load("models-exper/corefpruner-onto.ser.gz").asInstanceOf[(HashMap[UID,Int], ArrayBuffer[PairwiseScorer])];
         new DownstreamPairwiseLossFunction(Driver.lossFcn, foldMapping, models)
+      } else if (Driver.lossFcn.startsWith("scaled")) {
+        new ScaledDownstreamPairwiseLossFunction(Driver.lossFcn, new SimplePairwiseLossFunction(PairwiseLossFunctions.customLoss(0.1F, 3F, 1F)))
       } else {
         new SimplePairwiseLossFunction(PairwiseLossFunctions(Driver.lossFcn))
       }
@@ -248,7 +250,9 @@ object CorefSystem {
     val basicInferencer = new DocumentInferencerBasic();
     val (allPredBackptrs, allPredClusterings) = basicInferencer.viterbiDecodeAllFormClusterings(devDocGraphs, scorer);
     Logger.logss(CorefEvaluator.evaluateAndRender(devDocGraphs, allPredBackptrs, allPredClusterings, Driver.conllEvalScriptPath, "DEV: ", Driver.analysesToPrint));
-    ErrorAnalyzer.analyzeErrors(devDocGraphs, allPredBackptrs, allPredClusterings, scorer)
+    if (printErrorAnalysis) {
+      ErrorAnalyzer.analyzeErrors(devDocGraphs, allPredBackptrs, allPredClusterings, scorer)
+    }
     Logger.endTrack();
   }
   

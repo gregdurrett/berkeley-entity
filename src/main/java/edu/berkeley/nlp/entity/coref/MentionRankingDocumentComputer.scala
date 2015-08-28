@@ -12,10 +12,11 @@ import edu.berkeley.nlp.futile.math.SloppyMath
 class MentionRankingDocumentComputer(val featIdx: Indexer[String],
                                      val featurizer: PairwiseIndexingFeaturizer,
                                      val lossFcn: PairwiseLossFunction,
-                                     val doSps: Boolean = false,
-                                     val doMaxTraining: Boolean = false,
+                                     val doSps: Boolean = false, // Works worse, don't use
+                                     val doMaxTraining: Boolean = false, // Works worse, don't use
                                      val lossFromCurrWeights: Boolean = false,
-                                     val lossFromGold: Boolean = false) extends LikelihoodAndGradientComputerSparse[DocumentGraph] {
+                                     val lossFromGold: Boolean = false,
+                                     val scaledLossFromCurrWeights: Boolean = false) extends LikelihoodAndGradientComputerSparse[DocumentGraph] {
 
   def getInitialWeights(initialWeightsScale: Double): Array[Double] = Array.tabulate(featIdx.size)(i => 0.0)
   
@@ -25,6 +26,8 @@ class MentionRankingDocumentComputer(val featIdx: Indexer[String],
     val losses = if (lossFromCurrWeights) {
       lossFcn.lossFromCurrPrediction(docGraph.corefDoc, docGraph.prunedEdges, MentionRankingDocumentComputer.viterbiDecode(ex, featurizer, weights))
     } else if (lossFromGold) {
+      lossFcn.lossFromCurrPrediction(docGraph.corefDoc, docGraph.prunedEdges, ex.corefDoc.oraclePredOrderedClustering.getConsistentBackpointers)
+    } else if (scaledLossFromCurrWeights) {
       lossFcn.lossFromCurrPrediction(docGraph.corefDoc, docGraph.prunedEdges, ex.corefDoc.oraclePredOrderedClustering.getConsistentBackpointers)
     } else {
       lossFcn.loss(docGraph.corefDoc, docGraph.prunedEdges)

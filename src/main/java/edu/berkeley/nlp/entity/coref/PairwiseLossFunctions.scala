@@ -82,6 +82,36 @@ class DownstreamPairwiseLossFunction(spec: String,
   }
 }
 
+class ScaledDownstreamPairwiseLossFunction(spec: String,
+                                           baseLossFunction: PairwiseLossFunction) extends PairwiseLossFunction {
+  
+  def loss(doc: CorefDoc, ment: Int, ant: Int): Double = throw new RuntimeException("Unimplemented")
+  
+  def loss(doc: CorefDoc, ment: Int, prunedEdges: Array[Array[Boolean]]): Array[Double] = throw new RuntimeException("Unimplemented")
+  
+  def loss(doc: CorefDoc, prunedEdges: Array[Array[Boolean]]): Array[Array[Double]] = throw new RuntimeException("Unimplemented")
+  
+  def lossFromCurrPrediction(doc: CorefDoc, prunedEdges: Array[Array[Boolean]], prediction: Array[Int]): Array[Array[Double]] = {
+    val uid = doc.rawDoc.uid
+    val docGraph = new DocumentGraph(doc, false)
+    val losses = CorefEvaluator.getLosses(doc, prediction, 0, 0, 1, 0, 0, 1, Some(prunedEdges))
+    val avgLosses = Array.tabulate(losses.size)(i => {
+      val nonzeroLosses = losses(i).toSeq.filter(_ > 0)
+      nonzeroLosses.foldLeft(0.0)(_ + _)/nonzeroLosses.size
+    })
+    // 70th percentile right now
+    val sortedLosses = avgLosses.toSeq.sorted
+    val lossCutoff = sortedLosses((avgLosses.size * 0.7).toInt)
+    Array.tabulate(losses.size)(i => {
+      val isScaled = avgLosses(i) > lossCutoff
+      Array.tabulate(losses(i).size)(j => {
+        baseLossFunction.loss(doc, i, j) * (if (isScaled) 2.0 else 1.0)
+      })
+    })
+    // Top 30% of lossy things in the document get scaled up by a factor of 2
+  }
+}
+
 // This was written a while ago, hence why everything is vals and it's
 // kinda weirdly non-object oriented
 object PairwiseLossFunctions {
