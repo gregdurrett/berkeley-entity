@@ -51,6 +51,28 @@ class Mention(val rawDoc: ConllDoc,
   def pos = rawDoc.pos(sentIdx).slice(startIdx, endIdx);
   def headPos = rawDoc.pos(sentIdx)(headIdx);
   
+  def spanToStringWithHeadAndContext(numContextWords: Int) = {
+    var str = ""
+    for (i <- startIdx - numContextWords until endIdx + numContextWords) {
+      if (numContextWords > 0 && i == startIdx) {
+        str += "("
+      }
+      val thisWord = if (i == headIdx) {
+        "[" + accessWordOrPlaceholder(i) + "]"
+      } else {
+        accessWordOrPlaceholder(i)
+      }
+      str += thisWord
+      if (numContextWords > 0 && i == endIdx - 1) {
+        str += ")"
+      }
+      if (i < endIdx + numContextWords - 1) {
+        str += " "
+      }
+    }
+    str
+  }
+  
   def accessWordOrPlaceholder(idx: Int) = {
     if (idx < 0) Mention.StartWordPlaceholder else if (idx >= rawDoc.words(sentIdx).size) Mention.EndWordPlaceholder else rawDoc.words(sentIdx)(idx);
   }
@@ -72,32 +94,6 @@ class Mention(val rawDoc: ConllDoc,
       (if (headIdx < parentIdx) "L" else "R") + "-" + (if (pos) rawDoc.pos(sentIdx)(parentIdx) else rawDoc.words(sentIdx)(parentIdx));
     }
   }
-  
-//  private def wordsFromBaseIndexAndOffset(baseIdx: Int, offsets: Seq[Int]) = offsets.map(offset => accessWordOrPlaceholder(baseIdx + offset)).reduce(_ + " " + _)
-//  private def possFromBaseIndexAndOffset(baseIdx: Int, offsets: Seq[Int]) = offsets.map(offset => accessPosOrPlaceholder(baseIdx + offset)).reduce(_ + " " + _)
-//  
-//  def wordsFromStart(offsets: Seq[Int]) = wordsFromBaseIndexAndOffset(startIdx, offsets);
-//  def wordsFromHead(offsets: Seq[Int]) = wordsFromBaseIndexAndOffset(headIdx, offsets);
-//  def wordsFromEnd(offsets: Seq[Int]) = wordsFromBaseIndexAndOffset(endIdx, offsets);
-//  def possFromStart(offsets: Seq[Int]) = possFromBaseIndexAndOffset(startIdx, offsets);
-//  def possFromHead(offsets: Seq[Int]) = possFromBaseIndexAndOffset(headIdx, offsets);
-//  def possFromEnd(offsets: Seq[Int]) = possFromBaseIndexAndOffset(endIdx, offsets);
-//  
-//  def wordFromStart(offset: Int) = accessWordOrPlaceholder(startIdx + offset);
-//  def wordFromHead(offset: Int) = accessWordOrPlaceholder(headIdx + offset);
-//  def wordFromEnd(offset: Int) = accessWordOrPlaceholder(endIdx + offset);
-//  def posFromStart(offset: Int) = accessPosOrPlaceholder(startIdx + offset);
-//  def posFromHead(offset: Int) = accessPosOrPlaceholder(headIdx + offset);
-//  def posFromEnd(offset: Int) = accessPosOrPlaceholder(endIdx + offset);
-  
-  // These are explicit rather than in terms of Seq[Int] for lower overhead during
-  // feature computation.
-//  def wordBigramFromStart(offset1: Int, offset2: Int) = accessWordOrPlaceholder(startIdx + offset1) + " " + accessWordOrPlaceholder(startIdx + offset2);
-//  def wordBigramFromHead(offset1: Int, offset2: Int) = accessWordOrPlaceholder(headIdx + offset1) + " " + accessWordOrPlaceholder(headIdx + offset2);
-//  def wordBigramFromEnd(offset1: Int, offset2: Int) = accessWordOrPlaceholder(endIdx + offset1) + " " + accessWordOrPlaceholder(endIdx + offset2);
-//  def posBigramFromStart(offset1: Int, offset2: Int) = accessPosOrPlaceholder(startIdx + offset1) + " " + accessPosOrPlaceholder(startIdx + offset2);
-//  def posBigramFromHead(offset1: Int, offset2: Int) = accessPosOrPlaceholder(headIdx + offset1) + " " + accessPosOrPlaceholder(headIdx + offset2);
-//  def posBigramFromEnd(offset1: Int, offset2: Int) = accessPosOrPlaceholder(endIdx + offset1) + " " + accessPosOrPlaceholder(endIdx + offset2);
   
   def computeConjStr(conjFeatures: ConjFeatures, wni: Option[WordNetInterfacer], semClasser: Option[SemClasser]) = {
     val ordinal = conjFeatures.ordinal();

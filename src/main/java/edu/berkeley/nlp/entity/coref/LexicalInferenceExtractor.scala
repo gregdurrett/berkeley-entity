@@ -97,7 +97,8 @@ object LexicalInferenceExtractor {
   def writeExamplesNoGold(docs: Seq[DocumentGraph], corefPruner: CorefPruner, outFile: String) {
     val writer = IOUtils.openOutHard(outFile)
     var docCount = 0
-    var count = 0
+    var posCount = 0
+    var negCount = 0
     for (doc <- docs) {
       if (docCount % 100 == 0) {
         Logger.logss("On doc " + docCount + " / " + docs.size)
@@ -110,16 +111,21 @@ object LexicalInferenceExtractor {
           for (j <- 0 until i) {
             val prev = doc.getMention(j)
             if (!doc.isPruned(i, j) && !doc.getMention(j).mentionType.isClosedClass() && curr.headStringLc != prev.headStringLc) {
-              val ex = makeExample(doc, i, j, false)
+              val isGold = doc.isGoldNoPruning(i, j)
+              val ex = makeExample(doc, i, j, isGold)
               writer.println(ex.toString())
-              count += 1
+              if (isGold) {
+                posCount += 1
+              } else {
+                negCount += 1
+              }
             }
           }
         }
       }
       docCount += 1
     }
-    Logger.logss(count + " total examples")
+    Logger.logss((posCount + negCount) + " total examples; " + posCount + " positives and " + negCount + " negatives")
     writer.close
   }
   
@@ -151,10 +157,10 @@ object LexicalInferenceExtractor {
     val trainDocGraphs = CorefSystem.loadCorefDocs("../zcc11-new/data/conll-2012-en/train", -1, Driver.corefDocSuffix, Some(numberGenderComputer)).map(new DocumentGraph(_, true));
     writeExamplesNoGold(trainDocGraphs, corefPruner, "data/lexinf-train-raw.txt")
     
-//    val devDocGraphs = CorefSystem.loadCorefDocs("../zcc11-new/data/conll-2012-en/dev", -1, Driver.corefDocSuffix, Some(numberGenderComputer)).map(new DocumentGraph(_, true));
-//    writeExamplesNoGold(devDocGraphs, corefPruner, "data/lexinf-dev-raw.txt")
+    val devDocGraphs = CorefSystem.loadCorefDocs("../zcc11-new/data/conll-2012-en/dev", -1, Driver.corefDocSuffix, Some(numberGenderComputer)).map(new DocumentGraph(_, true));
+    writeExamplesNoGold(devDocGraphs, corefPruner, "data/lexinf-dev-raw.txt")
     
-//    val testDocGraphs = CorefSystem.loadCorefDocs("../zcc11-new/data/conll-2012-en/test", -1, Driver.corefDocSuffix, Some(numberGenderComputer)).map(new DocumentGraph(_, true));
-//    writeExamplesNoGold(testDocGraphs, corefPruner, "data/lexinf-test-raw.txt")
+    val testDocGraphs = CorefSystem.loadCorefDocs("../zcc11-new/data/conll-2012-en/test", -1, Driver.corefDocSuffix, Some(numberGenderComputer)).map(new DocumentGraph(_, true));
+    writeExamplesNoGold(testDocGraphs, corefPruner, "data/lexinf-test-raw.txt")
   }
 }

@@ -213,6 +213,9 @@ public class Driver implements Runnable {
   
   @Option(gloss = "Analyses to print; see CorefEvaluator for details")
   public static String analysesToPrint = "";
+  @Option(gloss = "Print an error analysis")
+  public static boolean printErrorAnalysis = false;
+  
   
   // MASK MAKING OPTIONS
   @Option(gloss = "")
@@ -300,7 +303,7 @@ public class Driver implements Runnable {
     PREDICT, PREDICT_EVALUATE, TRAIN_EVALUATE,
     PREDICT_ACE, PREDICT_EVALUATE_ACE, TRAIN_EVALUATE_ACE,
     TRAIN_EVALUATE_ACE_JOINT_INF,
-    COREF_TRAIN, COREF_PREDICT, COREF_TRAIN_EVALUATE, COREF_TRAIN_PREDICT,
+    COREF_TRAIN, COREF_PREDICT, COREF_TRAIN_EVALUATE, COREF_TRAIN_PREDICT, COREF_EVALUATE,
     MAKE_MASK_MODELS;
   }
   
@@ -335,6 +338,8 @@ public class Driver implements Runnable {
       CorefSystem.runTrainEvaluate(trainPath, trainSize, testPath, testSize, modelPath);
     } else if (mode == Mode.COREF_TRAIN_PREDICT) {
       CorefSystem.runTrainPredict(trainPath, trainSize, testPath, testSize, modelPath, outputPath, doConllPostprocessing);
+    } else if (mode == Mode.COREF_EVALUATE) {
+      CorefSystem.runEvaluate(testPath, testSize, modelPath);
     } else if (mode == Mode.MAKE_MASK_MODELS) {
       CorefPrunerJavaHack.trainAndSaveKFoldModels(trainPath, trainSize, maskNumFolds, maskOutPath);
     } else {

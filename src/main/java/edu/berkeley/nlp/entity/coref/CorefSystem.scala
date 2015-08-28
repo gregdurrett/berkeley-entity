@@ -98,7 +98,7 @@ object CorefSystem {
       GUtil.save(scorer, modelPath);
     }
     if (!devPath.isEmpty) {
-      runEvaluate(devPath, devSize, scorer);
+      runEvaluateErrorAnalysis(devPath, devSize, scorer, Driver.printErrorAnalysis);
     }
   }
   
@@ -238,23 +238,18 @@ object CorefSystem {
   }
   
   def runEvaluate(devPath: String, devSize: Int, modelPath: String) {
-    runEvaluateParallel(devPath, devSize, GUtil.load(modelPath).asInstanceOf[PairwiseScorer]);
+    runEvaluateErrorAnalysis(devPath, devSize, GUtil.load(modelPath).asInstanceOf[PairwiseScorer], Driver.printErrorAnalysis);
   }
   
-  def runEvaluate(devPath: String, devSize: Int, scorer: PairwiseScorer) {
+  def runEvaluateErrorAnalysis(devPath: String, devSize: Int, scorer: PairwiseScorer, printErrorAnalysis: Boolean) {
     val devDocGraphs = prepareTestDocuments(devPath, devSize);
     new CorefFeaturizerTrainer().featurizeBasic(devDocGraphs, scorer.featurizer);  // dev docs already know they are dev docs so they don't add features
     Logger.startTrack("Decoding dev");
     val basicInferencer = new DocumentInferencerBasic();
     val (allPredBackptrs, allPredClusterings) = basicInferencer.viterbiDecodeAllFormClusterings(devDocGraphs, scorer);
     Logger.logss(CorefEvaluator.evaluateAndRender(devDocGraphs, allPredBackptrs, allPredClusterings, Driver.conllEvalScriptPath, "DEV: ", Driver.analysesToPrint));
+    ErrorAnalyzer.analyzeErrors(devDocGraphs, allPredBackptrs, allPredClusterings, scorer)
     Logger.endTrack();
-  }
-  
-  def runEvaluateParallel(devPath: String, devSize: Int, scorer: PairwiseScorer) {
-    val devDocGraphs = prepareTestDocuments(devPath, devSize);
-    val allPredBackptrsAndClusterings = runPredictParallel(devDocGraphs, scorer);
-    Logger.logss(CorefEvaluator.evaluateAndRender(devDocGraphs, allPredBackptrsAndClusterings.map(_._1), allPredBackptrsAndClusterings.map(_._2), Driver.conllEvalScriptPath, "DEV: ", Driver.analysesToPrint));
   }
   
   def runPredictWriteOutput(devPath: String, devSize: Int, modelPath: String, outPath: String, doConllPostprocessing: Boolean) {
