@@ -142,6 +142,12 @@ object CorefSystem {
     if (featureSetSpec.featsToUse.contains("lexinf")) {
       auxFeaturizers += LexicalInferenceFeaturizer.loadLexInfFeaturizer(Driver.lexInfPath, Driver.pairwiseFeats.contains("lipath"))
     }
+    if (featureSetSpec.featsToUse.contains("lexinfmulti")) {
+      auxFeaturizers += LexicalInferenceFeaturizerMultiThresh.loadLexInfFeaturizer(Driver.lexInfPath, Driver.lexInfIndices.split(",").map(_.toInt), None, false)
+    }
+    if (featureSetSpec.featsToUse.contains("lexinfmultiscconj")) {
+      auxFeaturizers += LexicalInferenceFeaturizerMultiThresh.loadLexInfFeaturizer(Driver.lexInfPath, Driver.lexInfIndices.split(",").map(_.toInt), Some(trainDocGraphs.head.cachedWni), true)
+    }
     val basicFeaturizer = new PairwiseIndexingFeaturizerJoint(featureIndexer, featureSetSpec, lexicalCounts, queryCounts, semClasser, auxFeaturizers);
     val featurizerTrainer = new CorefFeaturizerTrainer();
     featurizerTrainer.featurizeBasic(trainDocGraphs, basicFeaturizer);
@@ -203,6 +209,11 @@ object CorefSystem {
 //      }
       weights
     }
+    
+    if (featureSetSpec.featsToUse.contains("lexinfmulti") && !auxFeaturizers.isEmpty && auxFeaturizers.head.isInstanceOf[LexicalInferenceFeaturizerMultiThresh]) {
+      auxFeaturizers.head.asInstanceOf[LexicalInferenceFeaturizerMultiThresh].displayHitRate
+    }
+    
     new PairwiseScorer(basicFeaturizer, weights).pack;
   }
   

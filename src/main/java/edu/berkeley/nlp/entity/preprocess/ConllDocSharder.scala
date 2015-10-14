@@ -26,7 +26,7 @@ object ConllDocSharder {
     new ConllDocReader(Language.ENGLISH).readConllDocsProcessStreaming(inputFile, (doc: ConllDoc) => {
       val outputName = outputDirectory + "/" + doc.docID
       val writer = IOUtils.openOutHard(outputName)
-      tokens += doc.words.map(_.size).reduce(_ + _)
+      tokens += doc.words.map(_.size).foldLeft(0)(_ + _)
       ConllDocWriter.writeDoc(writer, doc)
       writer.close
     })

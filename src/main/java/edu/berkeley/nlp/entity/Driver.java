@@ -200,6 +200,9 @@ public class Driver implements Runnable {
   
   @Option(gloss = "Path to lexical inference outputs (DB of nom/prop<->nom/prop synonymy)")
   public static String lexInfPath = "";
+  @Option(gloss = "Choices of beta to use for the lexinf stuff (some subset of 0 to 20, inclusive; there are 21 right now)")
+  public static String lexInfIndices = "";
+  
   @Option(gloss = "Use new training scheme")
   public static boolean alternateTraining = false;
   @Option(gloss = "Use stochastic primal subgradient on SVM objective instead of SGD on likelihood")
