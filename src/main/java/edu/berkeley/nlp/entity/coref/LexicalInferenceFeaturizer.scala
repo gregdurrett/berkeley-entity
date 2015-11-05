@@ -43,6 +43,27 @@ class LexicalInferenceFeaturizer(val lexInfDB: HashMap[(String,String),Seq[Strin
   }
 }
 
+//class LexicalInferenceOracleFeaturizer(val lexInfDB: HashMap[(String,String),Seq[String]]) extends AuxiliaryFeaturizer {
+//
+//  override def featurize(docGraph: DocumentGraph, currIdx: Int, antecedentIdx: Int): Seq[String] = {
+//    val feats = new ArrayBuffer[String]
+//    val curr = docGraph.getMention(currIdx)
+//    val ant = docGraph.getMention(antecedentIdx)
+//    if (!curr.mentionType.isClosedClass() && !ant.mentionType.isClosedClass()) {
+//      val currText = curr.spanToString
+//      val antText = ant.spanToString
+//      val forwardContained = lexInfDB.contains(antText -> currText)
+//      if (forwardContained) {
+//        val areGold = docGraph.corefDoc.getOraclePredClustering.areInSameCluster(currIdx, antecedentIdx)
+//        if (areGold) {
+//          feats += "OracleIncluded"
+//        }
+//      }
+//    }
+//    feats
+//  }
+//}
+
 object LexicalInferenceFeaturizer {
   def loadLexInfFeaturizer(lexInfResultsDir: String, usePathFeatures: Boolean) = {
     val lexInfDB = new HashMap[(String,String),Seq[String]];

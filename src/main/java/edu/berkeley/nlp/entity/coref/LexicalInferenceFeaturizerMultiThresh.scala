@@ -121,14 +121,49 @@ class LexicalInferenceFeaturizerMultiThresh(val lexInfDB: HashMap[(String,String
   }
 }
 
+
+class LexicalInferenceMultiThreshOracleFeaturizer(val lexInfDB: HashMap[(String,String),Seq[Int]],
+                                                  val indicesToUse: Array[Int]) extends AuxiliaryFeaturizer {
+
+  override def featurize(docGraph: DocumentGraph, currIdx: Int, antecedentIdx: Int): Seq[String] = {
+    val feats = new ArrayBuffer[String]
+    val curr = docGraph.getMention(currIdx)
+    val ant = docGraph.getMention(antecedentIdx)
+    if (!curr.mentionType.isClosedClass() && !ant.mentionType.isClosedClass()) {
+//      val currText = curr.spanToString.toLowerCase()
+//      val antText = ant.spanToString.toLowerCase()
+      val currText = LexicalInferenceExtractor.extractShortLabel(curr).toLowerCase()
+      val antText = LexicalInferenceExtractor.extractShortLabel(ant).toLowerCase()
+      val key = antText -> currText
+      val forwardContained = lexInfDB.contains(key)
+      // If one of the indices used was true
+      if (forwardContained && indicesToUse.map(lexInfDB(key)(_)).filter(_ == 2).size > 0) {
+        val areGold = docGraph.corefDoc.getOraclePredClustering.areInSameCluster(currIdx, antecedentIdx)
+        if (areGold) {
+          feats += "OracleIncluded"
+        }
+      }
+    }
+    feats
+  }
+}
+
 object LexicalInferenceFeaturizerMultiThresh {
   def loadLexInfFeaturizer(lexInfResultsDir: String, indicesToUse: Array[Int], wni: Option[WordNetInterfacer], useSemClassConj: Boolean) = {
+    new LexicalInferenceFeaturizerMultiThresh(loadLexInfDB(lexInfResultsDir), indicesToUse, wni, useSemClassConj)
+  }
+  
+  def loadLexInfOracleFeaturizer(lexInfResultsDir: String, indicesToUse: Array[Int]) = {
+    new LexicalInferenceMultiThreshOracleFeaturizer(loadLexInfDB(lexInfResultsDir), indicesToUse)
+  }
+  
+  def loadLexInfDB(lexInfResultsDir: String) = {
     val lexInfDB = new HashMap[(String,String),Seq[Int]];
     addFileToSet(lexInfDB, lexInfResultsDir + "/train.txt")
     addFileToSet(lexInfDB, lexInfResultsDir + "/dev.txt")
     addFileToSet(lexInfDB, lexInfResultsDir + "/test.txt")
     Logger.logss("Loaded " + lexInfDB.size + " true positive lexical inference pairs from " + lexInfResultsDir)
-    new LexicalInferenceFeaturizerMultiThresh(lexInfDB, indicesToUse, wni, useSemClassConj)
+    lexInfDB
   }
   
   def addFileToSet(map: HashMap[(String,String),Seq[Int]], file: String) {

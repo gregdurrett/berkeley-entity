@@ -145,6 +145,10 @@ object CorefSystem {
     if (featureSetSpec.featsToUse.contains("lexinfmulti")) {
       auxFeaturizers += LexicalInferenceFeaturizerMultiThresh.loadLexInfFeaturizer(Driver.lexInfPath, Driver.lexInfIndices.split(",").map(_.toInt), None, false)
     }
+    if (featureSetSpec.featsToUse.contains("lexinfmultioracle")) {
+      Logger.logss("Using oracle featurizer!")
+      auxFeaturizers += LexicalInferenceFeaturizerMultiThresh.loadLexInfOracleFeaturizer(Driver.lexInfPath, Driver.lexInfIndices.split(",").map(_.toInt))
+    }
     if (featureSetSpec.featsToUse.contains("lexinfmultiscconj")) {
       auxFeaturizers += LexicalInferenceFeaturizerMultiThresh.loadLexInfFeaturizer(Driver.lexInfPath, Driver.lexInfIndices.split(",").map(_.toInt), Some(trainDocGraphs.head.cachedWni), true)
     }
