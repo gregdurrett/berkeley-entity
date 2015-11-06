@@ -26,7 +26,7 @@ fi
 # Run the coreference system
 if [ ! -f test/coref/government.txt-0.pred_conll ]; then
   echo "RUNNING COREF"
-  java -Xmx2g -cp $jarpath edu.berkeley.nlp.entity.Driver ++config/base.conf -execDir test/scratch/coref -mode COREF_PREDICT -modelPath models/coref-onto.ser.gz -testPath test/preprocessed -outputPath test/coref
+  java -Xmx2g -cp $jarpath edu.berkeley.nlp.entity.Driver ++config/base.conf -execDir test/scratch/coref -mode COREF_PREDICT -modelPath models/coref-onto.ser.gz -testPath test/preprocessed -outputPath test/coref -corefDocSuffix ""
 else
   echo "Skipping coref..."
 fi
