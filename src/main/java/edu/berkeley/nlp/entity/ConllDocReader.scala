@@ -190,7 +190,7 @@ object ConllDocReader {
       } else if (line.trim.isEmpty) {
         docBySentencesByLines += new ArrayBuffer[String]();
       } else {
-//        require(!docBySentencesByLines.isEmpty, fileName + " " + i);
+        require(!docBySentencesByLines.isEmpty, fileName + " " + line);
         docBySentencesByLines.last += line;
       }
     }
