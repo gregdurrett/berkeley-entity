@@ -169,6 +169,14 @@ object SentenceSplitter {
     new CustomPTBTokenizer().tokenize(sentence);
   }
   
+  def tokenizeWhitespace(sentences: Array[String]): Array[Array[String]] = {
+    sentences.map(sentence => tokenizeWhitespaceSingle(sentence));
+  }
+  
+  def tokenizeWhitespaceSingle(sentence: String): Array[String] = {
+    sentence.split("\\s+")
+  }
+  
   private def canonicalizeLine(line: String) = {
     line.replaceAll("“", "``").replaceAll("”", "''").replaceAll("\"", "''").replaceAll("’", "'").replaceAll("\\s+", " ");
   }

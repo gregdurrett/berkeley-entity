@@ -153,6 +153,18 @@ class ConllDocReader(val lang: Language,
 
 object ConllDocReader {
   
+  def readConllDocsJustWordsFromDir(dirName: String): Array[ConllDocJustWords] = {
+    if (new File(dirName).exists) {
+      val allConllDocs = new ArrayBuffer[ConllDocJustWords]
+      for (file <- new File(dirName).listFiles) {
+        allConllDocs ++= readConllDocsJustWords(file.getAbsolutePath())
+      }
+      allConllDocs.toArray
+    } else {
+      Array[ConllDocJustWords]()
+    }
+  }
+  
   def readConllDocsJustWords(fileName: String): Array[ConllDocJustWords] = {
     val fcn = (docID: String, docPartNo: Int, docBySentencesByLines: ArrayBuffer[ArrayBuffer[String]]) => {
       new ConllDocJustWords(docID, docPartNo, docBySentencesByLines.filter(!_.isEmpty).map(_.map(_.split("\\s+")(3))));

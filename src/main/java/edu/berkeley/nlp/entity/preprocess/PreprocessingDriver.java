@@ -88,6 +88,8 @@ public class PreprocessingDriver implements Runnable {
   public static boolean respectInputLineBreaks = false;
   @Option(gloss = "Respect two consecutive line breaks for sentence segmentation (i.e. a blank line always means a new sentence). True by default.")
   public static boolean respectInputTwoLineBreaks = true;
+  @Option(gloss = "Use whitespace tokenization.")
+  public static boolean useWhitespaceTokenization = false;
   @Option(gloss = "Use an alternate tokenizer that may respect the original input a little bit more.")
   public static boolean useAlternateTokenizer = false;
   @Option(gloss = "Use full filesystem paths as document names rather than just file names")
@@ -121,7 +123,7 @@ public class PreprocessingDriver implements Runnable {
           processDocument(splitter, parser, backoffParser, nerSystem, inputDir + "/" + inputFile.getName(), outputDir + "/" + inputFile.getName());
         }
       } else if (mode == Mode.CONLL_JUST_WORDS) {
-        ConllDocJustWords[] conllDocs = ConllDocReader.readConllDocsJustWords(inputDir);
+        ConllDocJustWords[] conllDocs = ConllDocReader.readConllDocsJustWordsFromDir(inputDir);
         PrintWriter writer = IOUtils.openOutHard(outputDir);
         for (ConllDocJustWords conllDoc : conllDocs) {
           String docName = conllDoc.docID();
@@ -154,7 +156,14 @@ public class PreprocessingDriver implements Runnable {
     } else {
       sentences = splitter.splitSentences(canonicalizedParagraphs);
     }
-    String[][] tokenizedSentences = (useAlternateTokenizer ? splitter.tokenizeAlternate(sentences) : splitter.tokenize(sentences));
+    String[][] tokenizedSentences;
+    if (useWhitespaceTokenization) {
+      tokenizedSentences = SentenceSplitter.tokenizeWhitespace(sentences);
+    } else if (useAlternateTokenizer) {
+      tokenizedSentences = SentenceSplitter.tokenizeAlternate(sentences); 
+    } else {
+      tokenizedSentences = SentenceSplitter.tokenize(sentences);
+    }
     Logger.logss("Document " + docName + " contains " + lines.length + " lines and " + tokenizedSentences.length + " sentences");
     String[][] docConllLines = renderDocConllLines(docName, tokenizedSentences, parser, backoffParser, nerSystem);
     writeConllLines(docName, docConllLines, outputPath);
