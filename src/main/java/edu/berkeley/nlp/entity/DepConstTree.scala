@@ -16,10 +16,11 @@ import java.util.Collections
 import edu.berkeley.nlp.entity.lang.ModCollinsHeadFinder
 import edu.berkeley.nlp.futile.ling.CollinsHeadFinder
 
+@SerialVersionUID(1L)
 class DepConstTree(val constTree: Tree[String],
                    val pos: Seq[String],
                    val words: Seq[String],
-                   val childParentDepMap: HashMap[Int,Int]) {
+                   val childParentDepMap: HashMap[Int,Int]) extends Serializable {
   require(childParentDepMap.keys.toSeq.sorted.sameElements((0 until words.size)), PennTreeRenderer.render(constTree));
   
   def size = words.size;

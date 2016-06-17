@@ -15,6 +15,7 @@ import edu.berkeley.nlp.entity.WordNetInterfacer
 // TODO: Extract an interface for ConllDoc so I don't have to keep the whole
 // document around...but while I'm feature engineering it's useful to be able
 // to put my hands on anything I want
+@SerialVersionUID(1L)
 class Mention(val rawDoc: ConllDoc,
               val mentIdx: Int,
               val sentIdx: Int,
@@ -26,7 +27,7 @@ class Mention(val rawDoc: ConllDoc,
               val mentionType: MentionType,
               val nerString: String,
               val number: Number,
-              val gender: Gender) {
+              val gender: Gender) extends Serializable {
   
   private val cachedHeadStringLc = headString.toLowerCase;
   private val cachedAllHeadsLc = allHeadIndices.map(rawDoc.words(sentIdx)(_));

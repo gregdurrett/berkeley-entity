@@ -1,8 +1,9 @@
 package edu.berkeley.nlp.entity.coref
 import scala.collection.JavaConverters._
 
+@SerialVersionUID(1L)
 class OrderedClusteringBound(val ments: Seq[Mention],
-                             val clustering: OrderedClustering) {
+                             val clustering: OrderedClustering) extends Serializable {
   
   def postprocessForConll(): OrderedClusteringBound = {
     val mentIdxsToKeep = (0 until ments.size).filter(i => !clustering.isSingleton(i));

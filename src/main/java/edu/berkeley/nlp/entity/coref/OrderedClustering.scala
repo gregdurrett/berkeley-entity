@@ -4,7 +4,8 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.mutable.HashSet
 
-class OrderedClustering(val clusters: Seq[Seq[Int]]) {
+@SerialVersionUID(1L)
+class OrderedClustering(val clusters: Seq[Seq[Int]]) extends Serializable {
   // Elements must be consecutive integers from 0 up to n
   private val allIndicesSorted = clusters.foldLeft(new ArrayBuffer[Int])(_ ++ _).sorted; 
   require(allIndicesSorted.sameElements((0 until allIndicesSorted.size).toSeq), allIndicesSorted);
