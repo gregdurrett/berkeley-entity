@@ -24,7 +24,7 @@ import edu.berkeley.nlp.futile.fig.basic.Indexer
 object GUtil {
   
   def save[T <: Serializable](obj: T, path: String) {
-    if (new File(path).getParentFile() != null && new File(path).getParentFile().canWrite()) {
+    if (new File(path).getParentFile() != null && !(new File(path).getParentFile().canWrite())) {
       throw new RuntimeException("Can't write to " + path); 
     }
     if (path.endsWith(".gz")) saveGz(obj, path) else saveNonGz(obj, path);
