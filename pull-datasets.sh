@@ -4,13 +4,10 @@ mkdir data
 
 # Number and gender data
 rm data/gender.data
-letters=( a b c d e f )
-for letter in "${letters[@]}"; do
-  wget http://www.clsp.jhu.edu/~sbergsma/Gender/Data/gender.a${letter}.gz
-  gunzip gender.a${letter}.gz
-  cat gender.a${letter} >> data/gender.data
-  rm gender.a${letter}
-done
+wget http://www.cs.utexas.edu/~gdurrett/data/gender.data.tgz
+tar -xvf gender.data.tgz
+mv gender.data data/
+rm gender.data.tgz
 
 # Brown clusters
 wget http://people.csail.mit.edu/maestro/papers/bllip-clusters.gz

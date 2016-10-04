@@ -70,11 +70,12 @@ data as follows:
       cp $file path/to/flattened/directory
     done
 
-We also require [number and gender data](http://www.clsp.jhu.edu/~sbergsma/Gender/)
+We also require [number and gender data](http://www.cs.utexas.edu/~gdurrett/data/gender.data.tgz)
+produced by Shane Bergsma and Dekang Lin in "Bootstrapping Path-Based Pronoun Resolution"
 (default path the system expects this data at: data/gender.data) and [Brown clusters]
 (http://people.csail.mit.edu/maestro/papers/bllip-clusters.gz) (default path:
 data/bllip-clusters). ```pull-datasets.sh``` should pull these datasets for you
-and put htem in the appropriate locations.
+and put them in the appropriate locations.
 
 ####CoNLL Scorer
 
