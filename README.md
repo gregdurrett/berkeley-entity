@@ -5,7 +5,7 @@ The Berkeley Entity Resolution System jointly solves the problems of named entit
 
 
 
-##Preamble
+## Preamble
 
 The Berkeley Entity Resolution System is described in:
 
@@ -21,7 +21,7 @@ Questions? Bugs? Email me at gdurrett@eecs.berkeley.edu
 
 
 
-##License
+## License
 
 Copyright (c) 2013-2015 Greg Durrett. All Rights Reserved.
 
@@ -40,14 +40,14 @@ along with this program.  If not, see http://www.gnu.org/licenses/
 
 
 
-##Setup
+## Setup
 
-####Models
+#### Models
 
 Models are not included in GitHub due to their large size. Download the latest
 models from http://nlp.cs.berkeley.edu/projects/entity.shtml
 
-####Datasets
+#### Datasets
 
 See the [CoNLL 2012 shared task page](http://conll.cemantix.org/2012/data.html)
 for more information about the data formats. All of our files (input and
@@ -77,7 +77,7 @@ produced by Shane Bergsma and Dekang Lin in "Bootstrapping Path-Based Pronoun Re
 data/bllip-clusters). ```pull-datasets.sh``` should pull these datasets for you
 and put them in the appropriate locations.
 
-####CoNLL Scorer
+#### CoNLL Scorer
 
 Available at https://code.google.com/p/reference-coreference-scorers/
 
@@ -95,7 +95,7 @@ Other versions of the scorer may return different results.
 
 
 
-##Running the system
+## Running the system
 
 The main class is ```edu.berkeley.nlp.entity.Driver``` The running of the system is
 documented more thoroughly there. It supports running pretrained models on raw
@@ -132,7 +132,7 @@ these results, please contact me.
 
 
 
-##Preprocessing
+## Preprocessing
 
 The system is runnable from raw text as input. It runs a sentence splitter
 (Gillick, 2009), tokenizer (Penn Treebank), and parser (Berkeley parser), or a
@@ -142,7 +142,7 @@ for more information about these tools and command line options. See
 
 
 
-##Training
+## Training
 
 The system expects automatic annotations in files ending with auto_conll (i.e.
 parses) and gold annotations (i.e. coref and NER) in gold_conll files.
@@ -174,7 +174,7 @@ a sequence model) and so NER pruning is not necessary here.
 
 
 
-##Building from source
+## Building from source
 
 The easiest way to build is with SBT:
 https://github.com/harrah/xsbt/wiki/Getting-Started-Setup
@@ -190,7 +190,7 @@ http://scala-ide.org
 
 
 
-##Adding features
+## Adding features
 
 Features can be specified on the command line and are instantiated in a few
 different places.
@@ -214,7 +214,7 @@ fashion.
 
 
 
-##Troubleshooting
+## Troubleshooting
 
 Calling the coreference scorer (in TRAIN_EVALUATE mode) may cause an
 out-of-memory error because under the hood, Java forks the process and if
