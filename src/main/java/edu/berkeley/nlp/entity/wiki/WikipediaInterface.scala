@@ -17,6 +17,8 @@ import edu.berkeley.nlp.futile.util.Counter
 import edu.berkeley.nlp.futile.util.Logger
 import edu.berkeley.nlp.futile.fig.basic.Indexer
 import edu.berkeley.nlp.entity.wiki._
+import edu.berkeley.nlp.futile.fig.basic.IOUtils
+import java.io.PrintWriter
 
 /**
  * Crunches Wikipedia into a smaller database relativized to a particular test set.
@@ -139,6 +141,14 @@ class WikipediaInterface(val titleGivenSurfaceDB: WikipediaTitleGivenSurfaceDB,
       Logger.logss(key + " -> " + map(key));
     }
   }
+  
+  def writeToJsonFile(tgsPath: String, redirectsPath: String, categoriesPath: String, auxPath: String) {
+    titleGivenSurfaceDB.writeToJsonFile(tgsPath)
+    redirectsDB.writeToJsonFile(redirectsPath)
+    categoryDB.writeToJsonFile(categoriesPath)
+    auxDB.writeToJsonFile(auxPath)
+    
+  }
 }
 
 object WikipediaInterface {
@@ -160,6 +170,22 @@ object WikipediaInterface {
   
   val categoryDBInputPath = "";
   val categoryDBOutputPath = "";
+  
+  val jsonOutputDir = "json/"
+  
+  def writeMapToJson(writer: PrintWriter, map: HashMap[String,String], mapName: String, keyName: String, valueName: String, wrapValueInStr: Boolean = true) {
+    writer.println("  \"" + mapName + "\": [")
+    var first = true
+    for (key <- map.keys) {
+      if (!first) {
+        writer.println(",")
+      }
+      first = false
+      writer.print("    { \"" + keyName + "\": \"" + key + "\", \"" +
+                   valueName + "\": " + (if (wrapValueInStr) "\"" else "") + map(key) + (if (wrapValueInStr) "\"" else "") + " }")
+    }
+    writer.println("\n  ]")
+  }
   
   def processWikipedia(wikipediaPath: String, queries: Set[String], parser: CoarseToFineMaxRuleParser, backoffParser: CoarseToFineMaxRuleParser): WikipediaInterface = {
     val titleGivenSurface = WikipediaTitleGivenSurfaceDB.processWikipedia(wikipediaPath, queries);
@@ -234,6 +260,12 @@ object WikipediaInterface {
     } else {
       processWikipedia(WikipediaInterface.wikipediaDumpPath, queries, parser, backoffParser);
     } 
+    if (!jsonOutputDir.isEmpty) {
+      interface.writeToJsonFile(jsonOutputDir + "/target_given_surface.json.gz",
+                                jsonOutputDir + "/redirects.json.gz",
+                                jsonOutputDir + "/categories.json.gz",
+                                jsonOutputDir + "/aux.json.gz")
+    }
     GUtil.save(interface, WikipediaInterface.outputPath);
     if (WikipediaInterface.categoryDBOutputPath != "") {
       GUtil.save(interface.categoryDB, WikipediaInterface.categoryDBOutputPath);

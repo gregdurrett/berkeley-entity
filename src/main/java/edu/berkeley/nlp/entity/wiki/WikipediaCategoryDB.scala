@@ -65,6 +65,21 @@ class WikipediaCategoryDB(val categoryMap: HashMap[String,ArrayBuffer[String]],
       ""
     }
   }
+  
+  def writeToJsonFile(path: String) {
+    val writer = IOUtils.openOutHard(path)
+    writer.println("{")
+    WikipediaInterface.writeMapToJson(writer, new HashMap[String,String] ++ categoryMap.mapValues(buf => {
+      val newBuf = buf.map(entry => "\"" + entry + "\"")
+      "[ " + (if (newBuf.isEmpty) "" else newBuf.reduce(_ + ", " + _)) + " ]"
+    }), "categories", "title", "info", wrapValueInStr = false)
+    writer.println(",")
+    WikipediaInterface.writeMapToJson(writer, infoboxMap, "infoboxes", "title", "info")
+    writer.println(",")
+    WikipediaInterface.writeMapToJson(writer, appositiveMap, "appositives", "title", "info")
+    writer.println("}")
+    writer.close()
+  }
 }
 
 object WikipediaCategoryDB {

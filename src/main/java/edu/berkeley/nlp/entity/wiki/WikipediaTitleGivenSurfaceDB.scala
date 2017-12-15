@@ -74,6 +74,26 @@ class WikipediaTitleGivenSurfaceDB(val surfaceToTitle: CounterMap[String,String]
     }
     counter;
   }
+  
+  // Horrifyingly hard-coded but I didn't want to introduce a new dependency....
+  def writeToJsonFile(path: String) {
+    val writer = IOUtils.openOutHard(path)
+    writer.println("{")
+    writer.println("  \"surfaceToTitle\": [")
+    var first = true
+    for (key <- surfaceToTitle.keySet().asScala) {
+      for (value <- surfaceToTitle.getCounter(key).keySet().asScala) {
+        if (!first) {
+          writer.println(",")
+        }
+        first = false
+        // N.B. print so we can leave room for the comma
+        writer.print("    { \"surface\": \"" + key + "\", \"title\": \"" + key + "\", \"weight\": " + surfaceToTitle.getCount(key, value) + " }")
+      }
+    }
+    writer.println("\n  ]\n}")
+    writer.close()
+  }
 }
 
 

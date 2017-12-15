@@ -26,6 +26,16 @@ class WikipediaAuxDB(val disambiguationSet: HashSet[String]) extends Serializabl
     }
     counter;
   }
+  
+  // Horrifyingly hard-coded but I didn't want to introduce a new dependency....
+  def writeToJsonFile(path: String) {
+    val writer = IOUtils.openOutHard(path)
+    writer.println("{")
+    val disSet = disambiguationSet.map(entry => "\"" + entry + "\"")
+    writer.println("  \"disambiguationSet\": [" + (if (disambiguationSet.isEmpty) "" else disSet.reduce(_ + ", " + _)) + "]")
+    writer.println("}")
+    writer.close()
+  }
 }
 
 object WikipediaAuxDB {
