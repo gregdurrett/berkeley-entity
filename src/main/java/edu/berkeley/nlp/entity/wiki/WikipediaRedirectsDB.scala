@@ -45,7 +45,9 @@ class WikipediaRedirectsDB(val redirects: HashMap[String,String]) extends Serial
   // Horrifyingly hard-coded but I didn't want to introduce a new dependency....
   def writeToJsonFile(path: String) {
     val writer = IOUtils.openOutHard(path)
+    writer.println("{")
     WikipediaInterface.writeMapToJson(writer, redirects, "redirects", "title", "redirectsTo")
+    writer.println("}")
     writer.close()
   }
 }
