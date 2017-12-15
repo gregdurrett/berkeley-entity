@@ -171,7 +171,7 @@ object WikipediaInterface {
   val categoryDBInputPath = "";
   val categoryDBOutputPath = "";
   
-  val jsonOutputDir = "json/"
+  val jsonOutputDir = ""
   
   def writeMapToJson(writer: PrintWriter, map: HashMap[String,String], mapName: String, keyName: String, valueName: String, wrapValueInStr: Boolean = true) {
     writer.println("  \"" + mapName + "\": [")
