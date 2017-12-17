@@ -168,6 +168,7 @@ object WikipediaInterface {
   
   val computeLinkDB = true;
   
+  val extractCategoryInfo = true
   val categoryDBInputPath = "";
   val categoryDBOutputPath = "";
   
@@ -254,12 +255,17 @@ object WikipediaInterface {
 //    val queries = corefDocs.flatMap(_.predMentions.filter(!_.mentionType.isClosedClass)).flatMap(ment => WikipediaTitleGivenSurfaceDB.extractQueries(ment, ment.headIdx)).toSet;
     val queries = corefDocs.flatMap(_.predMentions.filter(!_.mentionType.isClosedClass)).flatMap(ment => Query.extractQueriesBest(ment).map(_.getFinalQueryStr)).toSet;
     Logger.logss("Extracted " + queries.size + " queries from " + corefDocs.size + " documents");
+    // Either load existing category info (if categoryDBInputPath is non empty), extract it, or ignore it, depending
+    // on params
     val interface = if (WikipediaInterface.categoryDBInputPath != "") {
       val categoryDB = GUtil.load(WikipediaInterface.categoryDBInputPath).asInstanceOf[WikipediaCategoryDB];
       processWikipedia(WikipediaInterface.wikipediaDumpPath, queries, categoryDB);
-    } else {
+    } else if (extractCategoryInfo) {
       processWikipedia(WikipediaInterface.wikipediaDumpPath, queries, parser, backoffParser);
-    } 
+    } else {
+      val emptyCategoryDB = new WikipediaCategoryDB(new HashMap(), new HashMap(), new HashMap());
+      processWikipedia(WikipediaInterface.wikipediaDumpPath, queries, emptyCategoryDB);
+    }
     if (!jsonOutputDir.isEmpty) {
       interface.writeToJsonFile(jsonOutputDir + "/target_given_surface.json.gz",
                                 jsonOutputDir + "/redirects.json.gz",
