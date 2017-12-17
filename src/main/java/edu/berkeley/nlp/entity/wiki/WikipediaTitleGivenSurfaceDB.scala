@@ -88,7 +88,7 @@ class WikipediaTitleGivenSurfaceDB(val surfaceToTitle: CounterMap[String,String]
         }
         first = false
         // N.B. print so we can leave room for the comma
-        writer.print("    { \"surface\": \"" + key + "\", \"title\": \"" + key + "\", \"weight\": " + surfaceToTitle.getCount(key, value) + " }")
+        writer.print("    { \"surface\": \"" + key + "\", \"title\": \"" + value + "\", \"weight\": " + surfaceToTitle.getCount(key, value) + " }")
       }
     }
     writer.println("\n  ]\n}")
