@@ -168,6 +168,8 @@ object WikipediaInterface {
   
   val computeLinkDB = true;
   
+  // Extracting category info takes a long time due to parsing for copula (called appositives
+  // in the code), so we can either disable it or cache it separately across multiple runs
   val extractCategoryInfo = true
   val categoryDBInputPath = "";
   val categoryDBOutputPath = "";
